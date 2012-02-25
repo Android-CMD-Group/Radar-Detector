@@ -8,6 +8,9 @@
 # Java class files
 *.class
 
+# Open temp files
+*~
+
 # generated files
 bin/
 gen/
