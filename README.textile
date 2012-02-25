@@ -1,7 +1,6 @@
-	
 h1. Radar Detector 
  
-an android based radar detector 
+An android based radar detector 
  
 h2. Branch structure 
  
