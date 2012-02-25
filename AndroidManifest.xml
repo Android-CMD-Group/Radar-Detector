@@ -18,6 +18,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+                    <service
+                android:process=":drive_listener"
+                android:name=".DriveListenerService" >
+            </service>
     </application>
 
 </manifest>
