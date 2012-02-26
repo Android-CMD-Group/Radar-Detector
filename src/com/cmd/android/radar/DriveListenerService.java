@@ -66,5 +66,4 @@ public class DriveListenerService extends Service {
 		// Unregister to save overhead
 		this.unregisterReceiver(this.wifiChangedReceiver);
 	}
-
 }
