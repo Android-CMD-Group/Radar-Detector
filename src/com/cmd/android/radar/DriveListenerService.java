@@ -5,14 +5,20 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiManager;
+import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
 
 public class DriveListenerService extends Service {
 
 	private BroadcastReceiver wifiChangedReceiver;
+	private LocationManager locationManager;
+	private String provider;
 
 	@Override
 	public IBinder onBind(Intent intent) {
@@ -38,25 +44,54 @@ public class DriveListenerService extends Service {
 		theFilter.addAction("android.net.wifi.STATE_CHANGE");
 
 		wifiChangedReceiver = new BroadcastReceiver() {
-			
+
 			@Override
 			public void onReceive(Context context, Intent intent) {
-				
+
 				// Only calls with disconnects
 				if (intent.getAction().equals(
 						WifiManager.NETWORK_STATE_CHANGED_ACTION)) {
 					NetworkInfo netInfo = intent
 							.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
 					if (netInfo.isConnected()) {
-						//TODO: Check whether the user is driving or not.
+						if (userIsDriving()) {
+							// TODO: launch shake listener
+						}
 					}
 				}
 
 			}
 		};
-		
+
 		// Register the receiver
 		this.registerReceiver(this.wifiChangedReceiver, theFilter);
+	}
+
+	private boolean userIsDriving() {
+
+
+		locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+
+		// Define a listener that responds to location updates
+		LocationListener locationListener = new LocationListener() {
+		    public void onLocationChanged(Location location) {
+		    	// Called when a new location is found by the network location provider.
+		    	if (location.hasSpeed()) {
+					
+				}
+		    }
+		    public void onStatusChanged(String provider, int status, Bundle extras) {}
+
+		    public void onProviderEnabled(String provider) {}
+
+		    public void onProviderDisabled(String provider) {}
+		  };
+		  
+		  locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 60000, 40, locationListener);
+
+		
+
+		return false;
 	}
 
 	@Override
