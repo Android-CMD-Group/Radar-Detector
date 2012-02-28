@@ -1,7 +1,9 @@
 package com.cmd.android.radar;
 
 import android.app.Activity;
-import android.content.Intent;
+import android.content.IntentFilter;
+import android.net.ConnectivityManager;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.util.Log;
 
@@ -16,10 +18,7 @@ public class MainSettingsActivity extends Activity {
 		setContentView(R.layout.main);
 
 		Log.d(MainSettingsActivity.LOG_TAG, "MainSettingsActivity created");
-
-		// This starts the DriveListenerService
-		startService(new Intent(MainSettingsActivity.this, DriveListenerService.class));
-
-
+		
+        
 	}
 }
