@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiManager;
+import android.util.Log;
+
 
 public class WifiChangeReceiver extends BroadcastReceiver {
 
@@ -13,8 +15,8 @@ public class WifiChangeReceiver extends BroadcastReceiver {
 		if (intent.getAction().equals(WifiManager.NETWORK_STATE_CHANGED_ACTION)) {
 			NetworkInfo netInfo = intent
 					.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
-			if (netInfo.isConnected()) {
-				// TODO: Launch service to check for driving 
+			if (!netInfo.isConnected()) {
+				//TODO: launch service to check if the user is driving or not
 			}
 		}
 	}
