@@ -11,29 +11,33 @@ public class LocationDecider {
 	ArrayList<Location> possibleLocationList;
 	ArrayList<Double> latList;
 	ArrayList<Double> longList;
-	
-	public LocationDecider(){
-	
+
+	public LocationDecider() {
+
 		possibleLocationList = new ArrayList<Location>();
 		latList = new ArrayList<Double>();
 		longList = new ArrayList<Double>();
 	}
-	
+
+	public SerializableLocation getBestLocationInSerializableForm() {
+
+		return new SerializableLocation(getBestLocation());
+	}
+
 	public Location getBestLocation() {
-		
+
 		Collections.sort(latList);
 		Collections.sort(longList);
-		Double medianLat = latList.get(latList.size()/2);
-		Double medianLong = longList.get(longList.size()/2);
-		Location returnLocation = new Location("custom provider");
-		
+		Double medianLat = latList.get(latList.size() / 2);
+		Double medianLong = longList.get(longList.size() / 2);
+		Location returnLocation = new Location("LOCATION_DECIDER");
 		returnLocation.setLatitude(medianLat);
 		returnLocation.setLongitude(medianLong);
 		returnLocation.setTime(getLatestLocationTime());
-		
+
 		return returnLocation;
 	}
-	
+
 	public void addPossibleLocation(Location location) {
 		latList.add(location.getLatitude());
 		longList.add(location.getLongitude());
@@ -44,14 +48,14 @@ public class LocationDecider {
 		return possibleLocationList.size();
 	}
 
-	private long getLatestLocationTime(){
+	private long getLatestLocationTime() {
 		long latestTime = 0;
 		for (Location location : possibleLocationList) {
-			if (location.getTime()>latestTime){
+			if (location.getTime() > latestTime) {
 				latestTime = location.getTime();
 			}
 		}
 		return latestTime;
 	}
-	
+
 }
