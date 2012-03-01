@@ -13,10 +13,48 @@ import android.os.IBinder;
 import android.util.Log;
 import android.widget.Toast;
 
+/**
+ * This Service is activated via WifiChangeReceiver and grabs the user location.
+ * Then if it just got the users location for the first time, it sleeps for a
+ * specified amount of time then wakes up again and grabs user location. It
+ * compares to two to see if the user is driving.
+ * 
+ * @author satshabad
+ * 
+ */
+/**
+ * @author satshabad
+ * 
+ */
 public class DriveListenerService extends Service {
 
+	// Only edit these two constants to adjust the threshold of speed and time
+	// for sleeping.
+
+	// Example: if the user has traveled at MIN_SPEED_THRESHOLD_MILE_PER_HOUR
+	// after the service slept, he is driving.
+	// Note: TIME_TO_SLEEP_IN_MINUTES is independent of
+	// MIN_SPEED_THRESHOLD_MILE_PER_HOUR. You can change one without changing
+	// the other.
+
+	/**
+	 * How long to sleep the service in minutes between location grabs
+	 */
 	private static final int TIME_TO_SLEEP_IN_MINUTES = 1;
+
+	/**
+	 * The minimum speed considered 'driving'
+	 */
 	private static final double MIN_SPEED_THRESHOLD_MILE_PER_HOUR = 20;
+
+	// edit this to change accuacy. untested so far
+
+	/**
+	 * How many tfixes to get before picking the best one.
+	 */
+	private static final int NUM_OF_FIXES_TO_GET = 1;
+
+	// Don't edit these constants to improve performance or for testing.
 
 	private static final int MINUTE_IN_MILLIS = 1000 * 60;
 	private static final int TIME_TO_SLEEP_IN_MILLIS = TIME_TO_SLEEP_IN_MINUTES
@@ -27,31 +65,64 @@ public class DriveListenerService extends Service {
 	private static final double MIN_THRESHOLD_DISTANCE_FOR_DRIVING = MIN_SPEED_THRESHOLD_METERS_PER_MILLIS
 			/ TIME_TO_SLEEP_IN_MILLIS;
 
+	/**
+	 * Key to grab serializable location from bundle in intent
+	 */
 	public static final String PREVIOUS_LOCATION_FIX = "PREVIOUS_LOCATION_FIX";
+
+	/**
+	 * The unique action id for the intent that launches the WifiChangeReceiver
+	 * after the timer expires
+	 */
 	public static final String TIMER_FOR_LOCATION_SLEEP = "com.cmd.android.radar.TIMER_FOR_LOCATION_SLEEP";
 
+	/**
+	 * Number of fixes received.
+	 */
 	private int numOfFixes;
+
+	/**
+	 * True if this is the first time the service has been launched, or false if
+	 * we already have a location to comapre with
+	 */
 	private boolean firstFixStateIndicator;
+
+	/**
+	 * The location of the last fix
+	 */
 	private Location previousFix;
+
+	/**
+	 * Manages our location stuff
+	 */
 	private LocationManager locationManager;
+
+	/**
+	 * Use this to register for location updates
+	 */
 	private LocationListener locationListener;
+
+	/**
+	 * This object helps decide what coordinates to use when there is more than
+	 * one fix
+	 */
 	private LocationDecider locationDecider;
 
 	@Override
 	public IBinder onBind(Intent intent) {
-		// No need to use this yet, the service is so far, unbound
+		// No need to use this yet, the service is so far unbound
 		return null;
 	}
 
+	// called when the service starts
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		Log.d(MainSettingsActivity.LOG_TAG,
-				"DriveListenerService onStartCommand Called");
+
+		// init variables
 		numOfFixes = 0;
 		locationDecider = new LocationDecider();
 
 		Bundle bundle = intent.getExtras();
-		Log.d(MainSettingsActivity.LOG_TAG, "bundle = " + bundle);
 
 		if (bundle == null) {
 			firstFixStateIndicator = true;
@@ -59,27 +130,34 @@ public class DriveListenerService extends Service {
 			firstFixStateIndicator = false;
 			SerializableLocation serialPrevFix = (SerializableLocation) bundle
 					.get(PREVIOUS_LOCATION_FIX);
-			Log.d(MainSettingsActivity.LOG_TAG, "serialPrevFix = "
-					+ serialPrevFix);
 			previousFix = serialPrevFix.returnEquivalentLocation();
 		}
 
-		Log.d(MainSettingsActivity.LOG_TAG, "firstLocationFix = "
-				+ firstFixStateIndicator);
+		Log.d(MainSettingsActivity.LOG_TAG,
+				"We have no prev fix = " + firstFixStateIndicator + " in "
+						+ DriveListenerService.class.getName());
 
 		locationManager = (LocationManager) this
 				.getSystemService(Context.LOCATION_SERVICE);
 
 		// Define a listener that responds to location updates
 		locationListener = new LocationListener() {
+
+			// Called when location CHANGES. This can be a problem if the
+			// location is not changing...
 			public void onLocationChanged(Location location) {
+
 				Log.d(MainSettingsActivity.LOG_TAG,
 						"got fix at " + location.getLatitude() + " "
 								+ location.getLongitude());
+
+				// Add the fix to the list
 				addLocationToPossible(location);
 				numOfFixes++;
+
 				Log.d(MainSettingsActivity.LOG_TAG, "numOfFixes= " + numOfFixes);
-				if (numOfFixes >= 1) {
+
+				if (numOfFixes >= NUM_OF_FIXES_TO_GET) {
 					useBestFix();
 				}
 			}
@@ -103,27 +181,47 @@ public class DriveListenerService extends Service {
 
 	}
 
+	/**
+	 * Adds the location to list of possible locations in locationDecider
+	 * 
+	 * @param location
+	 *            location to add
+	 */
 	protected void addLocationToPossible(Location location) {
 		locationDecider.addPossibleLocation(location);
 	}
 
+	/**
+	 * Gets the best fix from the locationDecider and either sends the service
+	 * to sleep if it's the first launch, or checks for driving and takes action
+	 */
 	protected void useBestFix() {
-		Log.d(MainSettingsActivity.LOG_TAG, "Using best fix");
+
+		// Now all the locations are in so, unregister for updates.
 		locationManager.removeUpdates(locationListener);
+
+		// If it's only the first time, pack up the location and sleep
 		if (firstFixStateIndicator) {
 			Intent intentForNextFix = new Intent(
 					"com.cmd.android.radar.WifiChangeReceiver");
+
 			intentForNextFix.setAction(TIMER_FOR_LOCATION_SLEEP);
+
 			Bundle extraBundle = new Bundle();
 			extraBundle.putSerializable(PREVIOUS_LOCATION_FIX,
 					locationDecider.getBestLocationInSerializableForm());
+
 			intentForNextFix.putExtras(extraBundle);
+
 			PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0,
 					intentForNextFix, 0);
 
+			// Set the broadcast alarm for a specified time and stop the service
 			AlarmManager alarmManager = (AlarmManager) getSystemService(Service.ALARM_SERVICE);
 			alarmManager.set(AlarmManager.RTC_WAKEUP,
-					System.currentTimeMillis() + TIME_TO_SLEEP_IN_MILLIS, pendingIntent);
+					System.currentTimeMillis() + TIME_TO_SLEEP_IN_MILLIS,
+					pendingIntent);
+
 			stopSelf();
 
 		} else {
@@ -131,26 +229,27 @@ public class DriveListenerService extends Service {
 				// TODO: Launch shake listener
 			}
 		}
-
 	}
 
-	@Override
-	public void onCreate() {
-		Log.d(MainSettingsActivity.LOG_TAG, "DriveListenerService created");
-		super.onCreate();
-	}
-
+	/**
+	 * Given the two points and the time slept, determine whether the user was
+	 * driving or not.
+	 * 
+	 * @param bestLastLocation
+	 *            the previous fix
+	 * @param bestNewLocation
+	 *            the new fix
+	 * @return true if driving, false if not
+	 */
 	private boolean isDriving(Location bestLastLocation,
 			Location bestNewLocation) {
-		// 2680 is 20 miles per hour in meters per
-		// minute after 5 minutes
 		float distance = bestLastLocation.distanceTo(bestNewLocation);
+
 		float speed = distance / MINUTE_IN_MILLIS
 				* (bestNewLocation.getTime() - bestLastLocation.getTime());
+
 		if (distance > MIN_THRESHOLD_DISTANCE_FOR_DRIVING) {
-			Log.d(MainSettingsActivity.LOG_TAG, "Driving at speed:"+ speed);
-			Toast.makeText(this, "You're driving at speed: " + speed,
-					Toast.LENGTH_LONG).show();
+			Log.d(MainSettingsActivity.LOG_TAG, "Driving at speed:" + speed);
 			return true;
 		}
 		return false;
@@ -158,6 +257,8 @@ public class DriveListenerService extends Service {
 
 	@Override
 	public void onDestroy() {
+		// If killed, release resources
+		locationManager.removeUpdates(locationListener);
 		super.onDestroy();
 
 	}
