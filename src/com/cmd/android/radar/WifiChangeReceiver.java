@@ -7,7 +7,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiManager;
-import android.os.Bundle;
 import android.util.Log;
 
 public class WifiChangeReceiver extends BroadcastReceiver {
@@ -15,9 +14,6 @@ public class WifiChangeReceiver extends BroadcastReceiver {
 	@Override
 	public void onReceive(Context context, Intent originalIntent) {
 		
-		if(isMyServiceRunning(context)){
-			return;
-		}
 		
 		Log.d(MainSettingsActivity.LOG_TAG, "Received Broadcast");
 		if (originalIntent.getAction().equals(
@@ -44,16 +40,6 @@ public class WifiChangeReceiver extends BroadcastReceiver {
 			
 			context.startService(serviceIntent);
 		}
-	}
-	
-	private boolean isMyServiceRunning(Context context) {
-	    ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-	    for (RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
-	        if (DriveListenerService.class.getName().equals(service.service.getClassName())) {
-	            return true;
-	        }
-	    }
-	    return false;
 	}
 
 }
