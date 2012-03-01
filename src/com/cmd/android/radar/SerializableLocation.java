@@ -4,8 +4,16 @@ import java.io.Serializable;
 
 import android.location.Location;
 
-public class SerializableLocation implements Serializable{
-	
+/**
+ * This is a work around class to help serialize location data in an android
+ * compatible format. For the methods, see android location documentation, they
+ * are the same.
+ * 
+ * @author satshabad
+ * 
+ */
+public class SerializableLocation implements Serializable {
+
 	private float accuracy;
 	private float bearing;
 	private double latitude;
@@ -14,8 +22,13 @@ public class SerializableLocation implements Serializable{
 	private float speed;
 	private long time;
 
-	public SerializableLocation(Location originalLocationObject){
-		
+	/**
+	 * Takes a location obejct and copies its members into this new object
+	 * 
+	 * @param originalLocationObject
+	 */
+	public SerializableLocation(Location originalLocationObject) {
+
 		accuracy = originalLocationObject.getAccuracy();
 		bearing = originalLocationObject.getBearing();
 		latitude = originalLocationObject.getLatitude();
@@ -25,12 +38,17 @@ public class SerializableLocation implements Serializable{
 		time = originalLocationObject.getTime();
 
 	}
-	
+
 	public SerializableLocation() {
 		// TODO Auto-generated constructor stub
 	}
 
-	public Location returnEquivalentLocation(){
+	/**
+	 * Converts #this to it's equiv Android based location object.
+	 * 
+	 * @return teh android based Location
+	 */
+	public Location returnEquivalentLocation() {
 		Location returnLocation = new Location(provider);
 		returnLocation.setAccuracy(accuracy);
 		returnLocation.setBearing(bearing);
@@ -41,16 +59,16 @@ public class SerializableLocation implements Serializable{
 		returnLocation.setTime(time);
 		return returnLocation;
 	}
-	
-	public boolean hasAccuracy(){
+
+	public boolean hasAccuracy() {
 		return accuracy != 0.0;
 	}
-	
-	public boolean hasBearing(){
+
+	public boolean hasBearing() {
 		return bearing != 0.0;
 	}
-	
-	public boolean hasSpeed(){
+
+	public boolean hasSpeed() {
 		return speed != 0.0f;
 	}
 
@@ -110,6 +128,4 @@ public class SerializableLocation implements Serializable{
 		this.time = time;
 	}
 
-	
-	
 }
