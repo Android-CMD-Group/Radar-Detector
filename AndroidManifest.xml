@@ -24,8 +24,7 @@
         </activity>
 
         <service
-            android:name=".DriveListenerService"
-            android:process=":drive_listener" >
+            android:name=".DriveListenerService">
         </service>
 
         <receiver android:name="com.cmd.android.radar.WifiChangeReceiver" >
