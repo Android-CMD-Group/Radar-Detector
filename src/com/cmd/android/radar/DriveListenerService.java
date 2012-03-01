@@ -15,9 +15,21 @@ import android.widget.Toast;
 
 public class DriveListenerService extends Service {
 
+	private static final int TIME_TO_SLEEP_IN_MINUTES = 1;
+	private static final double MIN_SPEED_THRESHOLD_MILE_PER_HOUR = 20;
+
+	private static final int MINUTE_IN_MILLIS = 1000 * 60;
+	private static final int TIME_TO_SLEEP_IN_MILLIS = TIME_TO_SLEEP_IN_MINUTES
+			* MINUTE_IN_MILLIS;
+	private static final double METERS_PER_MILE = 1609.344;
+	private static final double MIN_SPEED_THRESHOLD_METERS_PER_MILLIS = (MIN_SPEED_THRESHOLD_MILE_PER_HOUR * METERS_PER_MILE)
+			/ MINUTE_IN_MILLIS;
+	private static final double MIN_THRESHOLD_DISTANCE_FOR_DRIVING = MIN_SPEED_THRESHOLD_METERS_PER_MILLIS
+			/ TIME_TO_SLEEP_IN_MILLIS;
+
 	public static final String PREVIOUS_LOCATION_FIX = "PREVIOUS_LOCATION_FIX";
-	public static final int LOWEST_SPEED_DISTANCE_THRESHOLD = 2680;
 	public static final String TIMER_FOR_LOCATION_SLEEP = "com.cmd.android.radar.TIMER_FOR_LOCATION_SLEEP";
+
 	private int numOfFixes;
 	private boolean firstFixStateIndicator;
 	private Location previousFix;
@@ -35,20 +47,20 @@ public class DriveListenerService extends Service {
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		Log.d(MainSettingsActivity.LOG_TAG,
 				"DriveListenerService onStartCommand Called");
-		numOfFixes =0;
+		numOfFixes = 0;
 		locationDecider = new LocationDecider();
-		
+
 		Bundle bundle = intent.getExtras();
-		Log.d(MainSettingsActivity.LOG_TAG, "bundle = "
-				+ bundle);
-		
+		Log.d(MainSettingsActivity.LOG_TAG, "bundle = " + bundle);
+
 		if (bundle == null) {
 			firstFixStateIndicator = true;
 		} else {
 			firstFixStateIndicator = false;
-			SerializableLocation serialPrevFix = (SerializableLocation) bundle.get(PREVIOUS_LOCATION_FIX);
-		Log.d(MainSettingsActivity.LOG_TAG, "serialPrevFix = "
-				+ serialPrevFix);
+			SerializableLocation serialPrevFix = (SerializableLocation) bundle
+					.get(PREVIOUS_LOCATION_FIX);
+			Log.d(MainSettingsActivity.LOG_TAG, "serialPrevFix = "
+					+ serialPrevFix);
 			previousFix = serialPrevFix.returnEquivalentLocation();
 		}
 
@@ -90,8 +102,8 @@ public class DriveListenerService extends Service {
 		return super.onStartCommand(intent, flags, startId);
 
 	}
-	
-	protected void addLocationToPossible(Location location){
+
+	protected void addLocationToPossible(Location location) {
 		locationDecider.addPossibleLocation(location);
 	}
 
@@ -103,14 +115,15 @@ public class DriveListenerService extends Service {
 					"com.cmd.android.radar.WifiChangeReceiver");
 			intentForNextFix.setAction(TIMER_FOR_LOCATION_SLEEP);
 			Bundle extraBundle = new Bundle();
-			extraBundle.putSerializable(PREVIOUS_LOCATION_FIX, locationDecider.getBestLocationInSerializableForm());
+			extraBundle.putSerializable(PREVIOUS_LOCATION_FIX,
+					locationDecider.getBestLocationInSerializableForm());
 			intentForNextFix.putExtras(extraBundle);
 			PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0,
 					intentForNextFix, 0);
 
 			AlarmManager alarmManager = (AlarmManager) getSystemService(Service.ALARM_SERVICE);
 			alarmManager.set(AlarmManager.RTC_WAKEUP,
-					System.currentTimeMillis() + 60 * 1000, pendingIntent);
+					System.currentTimeMillis() + TIME_TO_SLEEP_IN_MILLIS, pendingIntent);
 			stopSelf();
 
 		} else {
@@ -132,9 +145,10 @@ public class DriveListenerService extends Service {
 		// 2680 is 20 miles per hour in meters per
 		// minute after 5 minutes
 		float distance = bestLastLocation.distanceTo(bestNewLocation);
-		float speed = distance
-				/ (1000*60)*(bestNewLocation.getTime() - bestLastLocation.getTime());
-		if (distance > LOWEST_SPEED_DISTANCE_THRESHOLD) {
+		float speed = distance / MINUTE_IN_MILLIS
+				* (bestNewLocation.getTime() - bestLastLocation.getTime());
+		if (distance > MIN_THRESHOLD_DISTANCE_FOR_DRIVING) {
+			Log.d(MainSettingsActivity.LOG_TAG, "Driving at speed:"+ speed);
 			Toast.makeText(this, "You're driving at speed: " + speed,
 					Toast.LENGTH_LONG).show();
 			return true;
