@@ -57,13 +57,11 @@ public class DriveListenerService extends Service {
 	// Don't edit these constants to improve performance or for testing.
 
 	private static final int MINUTE_IN_MILLIS = 1000 * 60;
-	private static final int TIME_TO_SLEEP_IN_MILLIS = TIME_TO_SLEEP_IN_MINUTES
-			* MINUTE_IN_MILLIS;
 	private static final double METERS_PER_MILE = 1609.344;
-	private static final double MIN_SPEED_THRESHOLD_METERS_PER_MILLIS = (MIN_SPEED_THRESHOLD_MILE_PER_HOUR * METERS_PER_MILE)
-			/ MINUTE_IN_MILLIS;
-	private static final double MIN_THRESHOLD_DISTANCE_FOR_DRIVING = MIN_SPEED_THRESHOLD_METERS_PER_MILLIS
-			/ TIME_TO_SLEEP_IN_MILLIS;
+
+	private static final double MINUTES_PER_HOUR = 60;
+	private static final double MIN_SPEED_THRESHOLD_METERS_PER_MINUTE = (MIN_SPEED_THRESHOLD_MILE_PER_HOUR * METERS_PER_MILE)/MINUTES_PER_HOUR;
+	private static final double MIN_THRESHOLD_DISTANCE_FOR_DRIVING = MIN_SPEED_THRESHOLD_METERS_PER_MINUTE*TIME_TO_SLEEP_IN_MINUTES;
 
 	/**
 	 * Key to grab serializable location from bundle in intent
@@ -219,7 +217,7 @@ public class DriveListenerService extends Service {
 			// Set the broadcast alarm for a specified time and stop the service
 			AlarmManager alarmManager = (AlarmManager) getSystemService(Service.ALARM_SERVICE);
 			alarmManager.set(AlarmManager.RTC_WAKEUP,
-					System.currentTimeMillis() + TIME_TO_SLEEP_IN_MILLIS,
+					System.currentTimeMillis() + TIME_TO_SLEEP_IN_MINUTES*MINUTE_IN_MILLIS,
 					pendingIntent);
 
 			stopSelf();
@@ -248,8 +246,13 @@ public class DriveListenerService extends Service {
 		float speed = distance / MINUTE_IN_MILLIS
 				* (bestNewLocation.getTime() - bestLastLocation.getTime());
 
-		if (distance > MIN_THRESHOLD_DISTANCE_FOR_DRIVING) {
-			Log.d(MainSettingsActivity.LOG_TAG, "Driving at speed:" + speed);
+		Log.d(MainSettingsActivity.LOG_TAG, "You traveled :" + distance + " Meters");
+		Log.d(MainSettingsActivity.LOG_TAG, "Speed:" + speed + "Meters per minute");
+		Log.d(MainSettingsActivity.LOG_TAG, "MIN_SPEED_THRESHOLD_METERS_PER_MINUTE: " +  MIN_SPEED_THRESHOLD_METERS_PER_MINUTE);
+		Log.d(MainSettingsActivity.LOG_TAG, "MIN_THRESHOLD_DISTANCE_FOR_DRIVING: " +   MIN_THRESHOLD_DISTANCE_FOR_DRIVING);
+		
+		if (speed > MIN_SPEED_THRESHOLD_METERS_PER_MINUTE) {
+			Log.d(MainSettingsActivity.LOG_TAG, "Driving");
 			return true;
 		}
 		return false;
