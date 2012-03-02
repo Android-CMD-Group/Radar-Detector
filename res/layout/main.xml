@@ -9,4 +9,16 @@
         android:layout_height="wrap_content"
         android:text="@string/hello" />
 
+    <Button
+        android:id="@+id/startShakeListener"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/start_shakelistener" android:width="180dp" android:onClick="launchShakeListener"/>
+
+    <Button
+        android:id="@+id/stopShakeListener"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/stop_shakelistener" android:width="180dp"/>
+
 </LinearLayout>

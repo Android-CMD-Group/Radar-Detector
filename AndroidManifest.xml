@@ -26,6 +26,10 @@
             android:name=".DriveListenerService"
             android:process=":drive_listener" >
         </service>
+         <service
+            android:name=".ShakeListenerService"
+            android:process=":shake_listener">
+        </service>
 
         <receiver android:name="com.cmd.android.radar.WifiChangeReceiver" >
             <intent-filter>
