@@ -32,17 +32,15 @@ public class WifiChangeReceiver extends BroadcastReceiver {
 	@Override
 	public void onReceive(Context context, Intent originalIntent) {
 
-		Log.d(MainSettingsActivity.LOG_TAG, "Received Broadcast in "
-				+ WifiChangeReceiver.class.getName());
+		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "Received Broadcast in WifichangeReceiver");
 
 		// Check to see if the onReceive method was called because of a wifi
 		// disconnect.
 		if (originalIntent.getAction().equals(
 				WifiManager.NETWORK_STATE_CHANGED_ACTION)) {
 
-			Log.d(MainSettingsActivity.LOG_TAG,
-					"Broadcast is NETWORK_STATE_CHANGED_ACTION in "
-							+ WifiChangeReceiver.class.getName());
+			Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
+					"Broadcast is NETWORK_STATE_CHANGED_ACTION");
 
 			NetworkInfo netInfo = originalIntent
 					.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
@@ -51,7 +49,7 @@ public class WifiChangeReceiver extends BroadcastReceiver {
 			// when Wifi is disconnected instead of on connect. This is changed
 			// to help testing.
 			if (netInfo.isConnected()) {
-				Log.d(MainSettingsActivity.LOG_TAG, "Launching service");
+				Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "Launching service");
 
 				// Launch the DriveListenerService
 				Intent serviceIntent = new Intent(context,
@@ -64,9 +62,8 @@ public class WifiChangeReceiver extends BroadcastReceiver {
 		} else if (originalIntent.getAction().equals(
 				DriveListenerService.TIMER_FOR_LOCATION_SLEEP)) {
 
-			Log.d(MainSettingsActivity.LOG_TAG,
-					"Broadcast is TIMER_FOR_LOCATION_SLEEP in "
-							+ WifiChangeReceiver.class.getName());
+			Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
+					"Broadcast is TIMER_FOR_LOCATION_SLEEP");
 
 			// Launch the DriverListenerService
 			Intent serviceIntent = new Intent(context,

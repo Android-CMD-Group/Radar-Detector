@@ -61,7 +61,6 @@ public class DriveListenerService extends Service {
 
 	private static final double MINUTES_PER_HOUR = 60;
 	private static final double MIN_SPEED_THRESHOLD_METERS_PER_MINUTE = (MIN_SPEED_THRESHOLD_MILE_PER_HOUR * METERS_PER_MILE)/MINUTES_PER_HOUR;
-	private static final double MIN_THRESHOLD_DISTANCE_FOR_DRIVING = MIN_SPEED_THRESHOLD_METERS_PER_MINUTE*TIME_TO_SLEEP_IN_MINUTES;
 
 	/**
 	 * Key to grab serializable location from bundle in intent
@@ -131,9 +130,8 @@ public class DriveListenerService extends Service {
 			previousFix = serialPrevFix.returnEquivalentLocation();
 		}
 
-		Log.d(MainSettingsActivity.LOG_TAG,
-				"We have no prev fix = " + firstFixStateIndicator + " in "
-						+ DriveListenerService.class.getName());
+		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
+				"We have no prev fix = " + firstFixStateIndicator);
 
 		locationManager = (LocationManager) this
 				.getSystemService(Context.LOCATION_SERVICE);
@@ -145,7 +143,7 @@ public class DriveListenerService extends Service {
 			// location is not changing...
 			public void onLocationChanged(Location location) {
 
-				Log.d(MainSettingsActivity.LOG_TAG,
+				Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
 						"got fix at " + location.getLatitude() + " "
 								+ location.getLongitude());
 
@@ -153,7 +151,7 @@ public class DriveListenerService extends Service {
 				addLocationToPossible(location);
 				numOfFixes++;
 
-				Log.d(MainSettingsActivity.LOG_TAG, "numOfFixes= " + numOfFixes);
+				Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "numOfFixes= " + numOfFixes);
 
 				if (numOfFixes >= NUM_OF_FIXES_TO_GET) {
 					useBestFix();
@@ -242,17 +240,21 @@ public class DriveListenerService extends Service {
 	private boolean isDriving(Location bestLastLocation,
 			Location bestNewLocation) {
 		float distance = bestLastLocation.distanceTo(bestNewLocation);
-
+		long sleepTime = (bestNewLocation.getTime() - bestLastLocation.getTime());
 		float speed = distance / MINUTE_IN_MILLIS
-				* (bestNewLocation.getTime() - bestLastLocation.getTime());
+				* sleepTime;
+		
+		double drivingDistanceThreshold = MIN_SPEED_THRESHOLD_METERS_PER_MINUTE*sleepTime/MINUTE_IN_MILLIS;
 
-		Log.d(MainSettingsActivity.LOG_TAG, "You traveled :" + distance + " Meters");
-		Log.d(MainSettingsActivity.LOG_TAG, "Speed:" + speed + "Meters per minute");
-		Log.d(MainSettingsActivity.LOG_TAG, "MIN_SPEED_THRESHOLD_METERS_PER_MINUTE: " +  MIN_SPEED_THRESHOLD_METERS_PER_MINUTE);
-		Log.d(MainSettingsActivity.LOG_TAG, "MIN_THRESHOLD_DISTANCE_FOR_DRIVING: " +   MIN_THRESHOLD_DISTANCE_FOR_DRIVING);
+		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "You traveled :" + distance + " Meters");
+		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "Speed:" + speed + "Meters per minute");
+		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "MIN_SPEED_THRESHOLD_METERS_PER_MINUTE: " +  MIN_SPEED_THRESHOLD_METERS_PER_MINUTE);
+		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "MIN_THRESHOLD_DISTANCE_FOR_DRIVING: " +   drivingDistanceThreshold);
+		Toast.makeText(this, "S: "+ speed+" D: "+ distance, Toast.LENGTH_LONG).show();
+		
 		
 		if (speed > MIN_SPEED_THRESHOLD_METERS_PER_MINUTE) {
-			Log.d(MainSettingsActivity.LOG_TAG, "Driving");
+			Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "Driving");
 			return true;
 		}
 		return false;
