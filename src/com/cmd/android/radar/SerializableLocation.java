@@ -14,7 +14,7 @@ import android.location.Location;
  */
 public class SerializableLocation implements Serializable {
 
-	private float accuracy;
+	private double accuracy;
 	private float bearing;
 	private double latitude;
 	private double longitude;
@@ -50,7 +50,7 @@ public class SerializableLocation implements Serializable {
 	 */
 	public Location returnEquivalentLocation() {
 		Location returnLocation = new Location(provider);
-		returnLocation.setAccuracy(accuracy);
+		returnLocation.setAccuracy((float) accuracy);
 		returnLocation.setBearing(bearing);
 		returnLocation.setLatitude(latitude);
 		returnLocation.setLongitude(longitude);
@@ -72,11 +72,11 @@ public class SerializableLocation implements Serializable {
 		return speed != 0.0f;
 	}
 
-	public float getAccuracy() {
+	public double getAccuracy() {
 		return accuracy;
 	}
 
-	public void setAccuracy(float accuracy) {
+	public void setAccuracy(double accuracy) {
 		this.accuracy = accuracy;
 	}
 

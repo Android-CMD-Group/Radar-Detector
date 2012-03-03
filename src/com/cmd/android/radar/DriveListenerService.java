@@ -30,6 +30,8 @@ public class DriveListenerService extends Service {
 
 	public static int numOfServicesLaunched = 0;
 
+	public static boolean isRunning = false;
+
 	// Only edit these two constants to adjust the threshold of speed and time
 	// for sleeping.
 
@@ -42,12 +44,12 @@ public class DriveListenerService extends Service {
 	/**
 	 * How long to sleep the service in minutes between location grabs
 	 */
-	private static final int TIME_TO_SLEEP_IN_MINUTES = 1;
+	private static final int TIME_TO_SLEEP_IN_MINUTES = 5;
 
 	/**
 	 * The minimum speed considered 'driving'
 	 */
-	private static final double MIN_SPEED_THRESHOLD_MILE_PER_HOUR = 20;
+	private static final double MIN_SPEED_THRESHOLD_MILE_PER_HOUR = 25;
 
 	// edit this to change accuacy. untested so far
 
@@ -118,6 +120,12 @@ public class DriveListenerService extends Service {
 		return null;
 	}
 
+	@Override
+	public void onCreate() {
+		DriveListenerService.isRunning = true;
+		super.onCreate();
+	}
+
 	// called when the service starts
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
@@ -140,10 +148,11 @@ public class DriveListenerService extends Service {
 			previousFix = serialPrevFix.returnEquivalentLocation();
 		}
 		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
-				"Launched service with" + " id: "+ uniqueID);
+				"Launched service with" + " id: " + uniqueID);
 
 		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
-				"We have no prev fix = " + firstFixStateIndicator + " id: "+ uniqueID);
+				"We have no prev fix = " + firstFixStateIndicator + " id: "
+						+ uniqueID);
 
 		locationManager = (LocationManager) this
 				.getSystemService(Context.LOCATION_SERVICE);
@@ -157,14 +166,14 @@ public class DriveListenerService extends Service {
 
 				Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
 						"got fix at " + location.getLatitude() + " "
-								+ location.getLongitude()+ " id: "+ uniqueID);
+								+ location.getLongitude() + " with acc: "+location.getAccuracy()+" id: " + uniqueID);
 
 				// Add the fix to the list
 				addLocationToPossible(location);
 				numOfFixes++;
 
 				Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
-						"numOfFixes= " + numOfFixes+ " id: "+ uniqueID);
+						"numOfFixes= " + numOfFixes + " id: " + uniqueID);
 
 				if (numOfFixes >= NUM_OF_FIXES_TO_GET) {
 					useBestFix();
@@ -232,7 +241,7 @@ public class DriveListenerService extends Service {
 					System.currentTimeMillis() + TIME_TO_SLEEP_IN_MINUTES
 							* MINUTE_IN_MILLIS, pendingIntent);
 			Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
-					"Now sleeping service with"+ " id: "+ uniqueID);
+					"Now sleeping service with" + " id: " + uniqueID);
 			stopSelf();
 
 		} else {
@@ -255,28 +264,49 @@ public class DriveListenerService extends Service {
 	private boolean isDriving(Location bestLastLocation,
 			Location bestNewLocation) {
 		float distance = bestLastLocation.distanceTo(bestNewLocation);
+		double distanceinMPH = distance * .000621371192;
 		long sleepTime = (bestNewLocation.getTime() - bestLastLocation
 				.getTime());
 		float speed = distance / MINUTE_IN_MILLIS * sleepTime;
-
+		double speedInMPH = speed * .000621371192 * 60;
 		double drivingDistanceThreshold = MIN_SPEED_THRESHOLD_METERS_PER_MINUTE
 				* sleepTime / MINUTE_IN_MILLIS;
 
-		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "You traveled :"
-				+ distance + " Meters"+ " id: "+ uniqueID);
-		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "Speed:" + speed
-				+ "Meters per minute"+ " id: "+ uniqueID);
+		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
+				"Prev fix: Lat = " + bestLastLocation.getLatitude()
+						+ " Long = " + bestLastLocation.getLongitude()
+						+ " Acc = " + bestLastLocation.getAccuracy() + " id: "
+						+ uniqueID);
+
+		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
+				"Curr fix: Lat = " + bestNewLocation.getLatitude() + " Long = "
+						+ bestNewLocation.getLongitude() + " Acc = "
+						+ bestNewLocation.getAccuracy() + " id: " + uniqueID);
+
 		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
 				"MIN_SPEED_THRESHOLD_METERS_PER_MINUTE: "
-						+ MIN_SPEED_THRESHOLD_METERS_PER_MINUTE+ " id: "+ uniqueID);
+						+ MIN_SPEED_THRESHOLD_METERS_PER_MINUTE + " id: "
+						+ uniqueID);
 		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
 				"MIN_THRESHOLD_DISTANCE_FOR_DRIVING: "
-						+ drivingDistanceThreshold+ " id: "+ uniqueID);
-		Toast.makeText(this, "S: " + speed + " D: " + distance,
+						+ drivingDistanceThreshold + " id: " + uniqueID);
+
+		Toast.makeText(this, "S: " + speedInMPH + " D: " + distanceinMPH,
 				Toast.LENGTH_LONG).show();
 
+		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "You traveled :"
+				+ distanceinMPH + " Miles" + " id: " + uniqueID);
+		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "Speed:"
+				+ speedInMPH + " Miles per hour" + " id: " + uniqueID);
+
+		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "You traveled :"
+				+ distance + " Meters" + " id: " + uniqueID);
+		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "Speed:" + speed
+				+ "Meters per minute" + " id: " + uniqueID);
+
 		if (speed > MIN_SPEED_THRESHOLD_METERS_PER_MINUTE) {
-			Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "Driving"+ " id: "+ uniqueID);
+			Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "Driving"
+					+ " id: " + uniqueID);
 			return true;
 		}
 		return false;
@@ -284,6 +314,7 @@ public class DriveListenerService extends Service {
 
 	@Override
 	public void onDestroy() {
+		DriveListenerService.isRunning = false;
 		// If killed, release resources
 		locationManager.removeUpdates(locationListener);
 		super.onDestroy();

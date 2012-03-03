@@ -67,6 +67,7 @@ public class LocationDecider {
 
 		// return new location with median lat and long
 		Location returnLocation = new Location("LOCATION_DECIDER");
+		returnLocation.setAccuracy(possibleLocationList.get(latList.size() / 2).getAccuracy());
 		returnLocation.setLatitude(medianLat);
 		returnLocation.setLongitude(medianLong);
 		returnLocation.setTime(getLatestLocationTime());

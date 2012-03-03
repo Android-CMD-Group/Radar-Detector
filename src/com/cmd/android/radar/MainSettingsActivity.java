@@ -10,7 +10,8 @@ import android.util.Log;
 public class MainSettingsActivity extends Activity {
 
 	/**
-	 * Log tag used to show processes of finding out whether user is driving or not
+	 * Log tag used to show processes of finding out whether user is driving or
+	 * not
 	 */
 	public static final String LOG_TAG_CHECK_FOR_DRIVING = "Radar-Detector.checkForDriving";
 
@@ -19,8 +20,7 @@ public class MainSettingsActivity extends Activity {
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
-		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
-				getPackageName());
-		
+		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, getPackageName());
+
 	}
 }

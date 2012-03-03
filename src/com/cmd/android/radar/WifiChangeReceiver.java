@@ -25,10 +25,12 @@ public class WifiChangeReceiver extends BroadcastReceiver {
 	// This is called when a NETWORK_STATE_CHANGED_ACTION or
 	// TIMER_FOR_LOCATION_SLEEP broadcast is received from the system. This
 	// method will start up the DriveListenerService Service.
-	
-	// If we detect that we have connected back to wifi during sleep time, we cancel the timer. 
-	
-	// there is also a check to make sure the service is not called when it exists already.
+
+	// If we detect that we have connected back to wifi during sleep time, we
+	// cancel the timer.
+
+	// there is also a check to make sure the service is not called when it
+	// exists already.
 
 	// NOTE:
 	// NETWORK_STATE_CHANGED_ACTION is only broadcast when:
@@ -58,6 +60,12 @@ public class WifiChangeReceiver extends BroadcastReceiver {
 			// to help testing.
 			if (!(netInfo.isConnected() || netInfo.isConnectedOrConnecting())) {
 
+				if (DriveListenerService.isRunning) {
+					Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
+							"Broadcast indicates disconnected, but service already running...");
+					return;
+				}
+
 				if (doesPendingIntentExist(context) != null) {
 					Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
 							"Broadcast indicates disconnected, but alarm already exists...");
@@ -71,7 +79,7 @@ public class WifiChangeReceiver extends BroadcastReceiver {
 						DriveListenerService.class);
 				context.startService(serviceIntent);
 
-			} else if (netInfo.isConnected()){
+			} else if (netInfo.isConnected()) {
 
 				Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
 						"Broadcast indicates connected");
@@ -84,7 +92,7 @@ public class WifiChangeReceiver extends BroadcastReceiver {
 					am.cancel(pendingIntent);
 					pendingIntent.cancel();
 
-				}else{
+				} else {
 					Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
 							"No alarm to cancel");
 				}
@@ -121,13 +129,15 @@ public class WifiChangeReceiver extends BroadcastReceiver {
 			e.printStackTrace();
 		}
 		// and generate a pending intent
-		
+
 		Intent intentForNextFix = new Intent(
 				"com.cmd.android.radar.WifiChangeReceiver");
 
-		intentForNextFix.setAction(DriveListenerService.TIMER_FOR_LOCATION_SLEEP);
-		
-		PendingIntent pi = PendingIntent.getBroadcast(mycontext, 0, intentForNextFix, PendingIntent.FLAG_NO_CREATE);
+		intentForNextFix
+				.setAction(DriveListenerService.TIMER_FOR_LOCATION_SLEEP);
+
+		PendingIntent pi = PendingIntent.getBroadcast(mycontext, 0,
+				intentForNextFix, PendingIntent.FLAG_NO_CREATE);
 		return pi;
 	}
 
