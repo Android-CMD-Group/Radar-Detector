@@ -19,6 +19,8 @@ public class MainSettingsActivity extends Activity {
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
+		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
+				getPackageName());
 		
 	}
 }

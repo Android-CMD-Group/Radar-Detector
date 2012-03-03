@@ -28,6 +28,8 @@ import android.widget.Toast;
  */
 public class DriveListenerService extends Service {
 
+	public static int numOfServicesLaunched = 0;
+
 	// Only edit these two constants to adjust the threshold of speed and time
 	// for sleeping.
 
@@ -60,7 +62,8 @@ public class DriveListenerService extends Service {
 	private static final double METERS_PER_MILE = 1609.344;
 
 	private static final double MINUTES_PER_HOUR = 60;
-	private static final double MIN_SPEED_THRESHOLD_METERS_PER_MINUTE = (MIN_SPEED_THRESHOLD_MILE_PER_HOUR * METERS_PER_MILE)/MINUTES_PER_HOUR;
+	private static final double MIN_SPEED_THRESHOLD_METERS_PER_MINUTE = (MIN_SPEED_THRESHOLD_MILE_PER_HOUR * METERS_PER_MILE)
+			/ MINUTES_PER_HOUR;
 
 	/**
 	 * Key to grab serializable location from bundle in intent
@@ -72,6 +75,8 @@ public class DriveListenerService extends Service {
 	 * after the timer expires
 	 */
 	public static final String TIMER_FOR_LOCATION_SLEEP = "com.cmd.android.radar.TIMER_FOR_LOCATION_SLEEP";
+
+	private static final String UNIQUE_ID_KEY = "UNIQUE_ID_KEY";
 
 	/**
 	 * Number of fixes received.
@@ -105,6 +110,8 @@ public class DriveListenerService extends Service {
 	 */
 	private LocationDecider locationDecider;
 
+	private int uniqueID;
+
 	@Override
 	public IBinder onBind(Intent intent) {
 		// No need to use this yet, the service is so far unbound
@@ -123,15 +130,20 @@ public class DriveListenerService extends Service {
 
 		if (bundle == null) {
 			firstFixStateIndicator = true;
+			uniqueID = DriveListenerService.numOfServicesLaunched;
+			DriveListenerService.numOfServicesLaunched++;
 		} else {
+			uniqueID = bundle.getInt(UNIQUE_ID_KEY);
 			firstFixStateIndicator = false;
 			SerializableLocation serialPrevFix = (SerializableLocation) bundle
 					.get(PREVIOUS_LOCATION_FIX);
 			previousFix = serialPrevFix.returnEquivalentLocation();
 		}
+		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
+				"Launched service with" + " id: "+ uniqueID);
 
 		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
-				"We have no prev fix = " + firstFixStateIndicator);
+				"We have no prev fix = " + firstFixStateIndicator + " id: "+ uniqueID);
 
 		locationManager = (LocationManager) this
 				.getSystemService(Context.LOCATION_SERVICE);
@@ -145,13 +157,14 @@ public class DriveListenerService extends Service {
 
 				Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
 						"got fix at " + location.getLatitude() + " "
-								+ location.getLongitude());
+								+ location.getLongitude()+ " id: "+ uniqueID);
 
 				// Add the fix to the list
 				addLocationToPossible(location);
 				numOfFixes++;
 
-				Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "numOfFixes= " + numOfFixes);
+				Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
+						"numOfFixes= " + numOfFixes+ " id: "+ uniqueID);
 
 				if (numOfFixes >= NUM_OF_FIXES_TO_GET) {
 					useBestFix();
@@ -206,6 +219,7 @@ public class DriveListenerService extends Service {
 			Bundle extraBundle = new Bundle();
 			extraBundle.putSerializable(PREVIOUS_LOCATION_FIX,
 					locationDecider.getBestLocationInSerializableForm());
+			extraBundle.putInt(UNIQUE_ID_KEY, uniqueID);
 
 			intentForNextFix.putExtras(extraBundle);
 
@@ -215,14 +229,15 @@ public class DriveListenerService extends Service {
 			// Set the broadcast alarm for a specified time and stop the service
 			AlarmManager alarmManager = (AlarmManager) getSystemService(Service.ALARM_SERVICE);
 			alarmManager.set(AlarmManager.RTC_WAKEUP,
-					System.currentTimeMillis() + TIME_TO_SLEEP_IN_MINUTES*MINUTE_IN_MILLIS,
-					pendingIntent);
-
+					System.currentTimeMillis() + TIME_TO_SLEEP_IN_MINUTES
+							* MINUTE_IN_MILLIS, pendingIntent);
+			Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
+					"Now sleeping service with"+ " id: "+ uniqueID);
 			stopSelf();
 
 		} else {
 			if (isDriving(previousFix, locationDecider.getBestLocation())) {
-				// TODO: Launch shake listener
+				stopSelf();
 			}
 		}
 	}
@@ -240,21 +255,28 @@ public class DriveListenerService extends Service {
 	private boolean isDriving(Location bestLastLocation,
 			Location bestNewLocation) {
 		float distance = bestLastLocation.distanceTo(bestNewLocation);
-		long sleepTime = (bestNewLocation.getTime() - bestLastLocation.getTime());
-		float speed = distance / MINUTE_IN_MILLIS
-				* sleepTime;
-		
-		double drivingDistanceThreshold = MIN_SPEED_THRESHOLD_METERS_PER_MINUTE*sleepTime/MINUTE_IN_MILLIS;
+		long sleepTime = (bestNewLocation.getTime() - bestLastLocation
+				.getTime());
+		float speed = distance / MINUTE_IN_MILLIS * sleepTime;
 
-		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "You traveled :" + distance + " Meters");
-		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "Speed:" + speed + "Meters per minute");
-		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "MIN_SPEED_THRESHOLD_METERS_PER_MINUTE: " +  MIN_SPEED_THRESHOLD_METERS_PER_MINUTE);
-		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "MIN_THRESHOLD_DISTANCE_FOR_DRIVING: " +   drivingDistanceThreshold);
-		Toast.makeText(this, "S: "+ speed+" D: "+ distance, Toast.LENGTH_LONG).show();
-		
-		
+		double drivingDistanceThreshold = MIN_SPEED_THRESHOLD_METERS_PER_MINUTE
+				* sleepTime / MINUTE_IN_MILLIS;
+
+		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "You traveled :"
+				+ distance + " Meters"+ " id: "+ uniqueID);
+		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "Speed:" + speed
+				+ "Meters per minute"+ " id: "+ uniqueID);
+		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
+				"MIN_SPEED_THRESHOLD_METERS_PER_MINUTE: "
+						+ MIN_SPEED_THRESHOLD_METERS_PER_MINUTE+ " id: "+ uniqueID);
+		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING,
+				"MIN_THRESHOLD_DISTANCE_FOR_DRIVING: "
+						+ drivingDistanceThreshold+ " id: "+ uniqueID);
+		Toast.makeText(this, "S: " + speed + " D: " + distance,
+				Toast.LENGTH_LONG).show();
+
 		if (speed > MIN_SPEED_THRESHOLD_METERS_PER_MINUTE) {
-			Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "Driving");
+			Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, "Driving"+ " id: "+ uniqueID);
 			return true;
 		}
 		return false;
