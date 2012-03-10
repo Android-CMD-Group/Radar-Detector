@@ -13,13 +13,20 @@ public class MainSettingsActivity extends Activity {
 	
 	// Buttons for starting and stopping the ShakeListenerService
 	private Button startShakeListener;
-	private Button stopShakeListener;
+
+	/**
+	 * Log tag used to show processes of finding out whether user is driving or
+	 * not
+	 */
+	public static final String LOG_TAG_CHECK_FOR_DRIVING = "Radar-Detector.checkForDriving";
+
 
 	/** Called when the activity is first created. */
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
+
 		Log.d(MainSettingsActivity.LOG_TAG, "MainSettingsActivity created");
 	}
 	
@@ -32,5 +39,8 @@ public class MainSettingsActivity extends Activity {
 	// Look into binding to the activity.
 	public void killShakeListener(View v) {
 		this.stopService(new Intent(this, ShakeListenerService.class));
+
+		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, getPackageName());
+
 	}
 }
