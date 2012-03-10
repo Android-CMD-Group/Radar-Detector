@@ -31,6 +31,6 @@ public class MainSettingsActivity extends Activity {
 	// Kills the ShakeListenerService.
 	// Look into binding to the activity.
 	public void killShakeListener(View v) {
-		
+		this.stopService(new Intent(this, ShakeListenerService.class));
 	}
 }

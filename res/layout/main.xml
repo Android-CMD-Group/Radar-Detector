@@ -19,6 +19,6 @@
         android:id="@+id/stopShakeListener"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/stop_shakelistener" android:width="180dp"/>
+        android:text="@string/stop_shakelistener" android:width="180dp" android:onClick="killShakeListener"/>
 
 </LinearLayout>
