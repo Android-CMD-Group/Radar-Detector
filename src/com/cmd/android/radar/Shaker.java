@@ -6,94 +6,106 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.SystemClock;
-import android.util.Log;
 
-public class Shaker {
-	private SensorManager mSensorManager = null;
+public class Shaker
+{
+	private SensorManager sensorMgr = null;	// Used for accessing Accelerometer
+	private double threshold = 2.25d;		// Threshold for detecting shakes
+	private long gap = 1500;				// Minimum time (ms) between shakes
 	private long lastShakeTimestamp = 0;
-	private double threshold = 1.0d;
-	private long gap = 0;
 	private Shaker.Callback cb = null;
-	
-	public Shaker(Context ctxt, double threshold, long gap, Shaker.Callback cb) {
-		this.threshold = Math.pow(threshold, 2);
-		this.threshold = this.threshold * SensorManager.GRAVITY_EARTH
-				* SensorManager.GRAVITY_EARTH;
-		this.gap = gap;
-		this.cb = cb;
 
-		mSensorManager = (SensorManager) ctxt
-				.getSystemService(Context.SENSOR_SERVICE);
-		mSensorManager.registerListener(listener,
-				mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
-				SensorManager.SENSOR_DELAY_UI);
-
-	}
-	private SensorEventListener listener = new SensorEventListener() {
-
-		@Override
-		public void onAccuracyChanged(Sensor sensor, int accuracy) {
-			// TODO Auto-generated method stub
-
-		}
-
+	/**
+	 * Shake Listener
+	 * Calculates the net force given the acceleration from the x, y, and z axis
+	 * if (net force > THRESHOLD) the device is shaking
+	 */
+	private SensorEventListener shakeListener = new SensorEventListener()
+	{
+		/**
+		 * Called when there is a sensor change
+		 */
 		@Override
 		public void onSensorChanged(SensorEvent event) {
-			// TODO Auto-generated method stub
+			
 			if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
 				double netForce = Math.pow(event.values[0], 2);
 				netForce += Math.pow(event.values[1], 2);
 				netForce += Math.pow(event.values[2], 2);
-
-				if (netForce > threshold) {
-					Log.d(ShakeListenerService.LOG_TAG, "netforce = " + netForce);
+	
+				if (netForce > threshold) 
 					isShaking();
-				} else {
+				else 
 					isNotShaking();
-				}
 			}
 		}
 
+		@Override
+		public void onAccuracyChanged(Sensor sensor, int accuracy) {
+			
+		}
 	};
 
-	private void isShaking() {
+	/**
+	 * Shaker class.
+	 */
+	public Shaker(Context ctxt, Shaker.Callback cb) 
+	{
+		this.threshold = Math.pow(threshold, 2);
+		this.threshold = this.threshold * SensorManager.GRAVITY_EARTH
+				* SensorManager.GRAVITY_EARTH;
+		this.cb = cb;
+
+		/**
+		 * Build the SensorManager and register a SesnorEventListener
+		 */
+		this.sensorMgr = (SensorManager) ctxt.getSystemService(Context.SENSOR_SERVICE);
+		Sensor sensor = this.sensorMgr.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+		int sensorDelay = SensorManager.SENSOR_DELAY_UI;
+		if (sensor.getType() == Sensor.TYPE_ACCELEROMETER)
+			this.sensorMgr.registerListener(shakeListener, sensor, sensorDelay);
+	}
+	
+	private void isShaking() 
+	{
 		long now = SystemClock.uptimeMillis();
-
-		if (lastShakeTimestamp == 0) {
+		if (lastShakeTimestamp == 0)
+		{
 			lastShakeTimestamp = now;
-
-			if (cb != null) {
+			if (cb != null)
 				cb.shakingStarted();
-			}
-		} else {
-			lastShakeTimestamp = now;
 		}
+		else
+			lastShakeTimestamp = now;
 	}
 
-	private void isNotShaking() {
+	private void isNotShaking() 
+	{
 		long now = SystemClock.uptimeMillis();
 
-		if (lastShakeTimestamp > 0) {
-			if (now - lastShakeTimestamp > gap) {
+		if (lastShakeTimestamp > 0)
+		{
+			if (now - lastShakeTimestamp > gap)
+			{
 				lastShakeTimestamp = 0;
-
-				if (cb != null) {
+				if (cb != null) 
 					cb.shakingStopped();
-				}
 			}
 		}
 	}
 
-	public void close() {
-		mSensorManager.unregisterListener(listener);
+	/**
+	 * Used to unregister the shakeListener.
+	 * IMPORTANT: a listener must be unregistered or it consumes battery
+	 */
+	public void close()
+	{
+		sensorMgr.unregisterListener(shakeListener);
 	}
 
-	public interface Callback {
+	public interface Callback
+	{
 		void shakingStarted();
-
 		void shakingStopped();
 	}
-
-
-
 }

@@ -26,13 +26,11 @@ public class MainSettingsActivity extends Activity {
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
-
 		Log.d(MainSettingsActivity.LOG_TAG, "MainSettingsActivity created");
 	}
 	
 	// Starts the ShakeListenerService
 	public void launchShakeListener(View v) {
-		Log.d(LOG_TAG, "launchShakeListener clicked...");
 		startService(new Intent(this, ShakeListenerService.class));
 	}
 	
@@ -40,8 +38,5 @@ public class MainSettingsActivity extends Activity {
 	// Look into binding to the activity.
 	public void killShakeListener(View v) {
 		this.stopService(new Intent(this, ShakeListenerService.class));
-
-		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, getPackageName());
-
 	}
 }
