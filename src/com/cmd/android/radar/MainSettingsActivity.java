@@ -32,6 +32,7 @@ public class MainSettingsActivity extends Activity {
 	
 	// Starts the ShakeListenerService
 	public void launchShakeListener(View v) {
+		Log.d(LOG_TAG, "launchShakeListener clicked...");
 		startService(new Intent(this, ShakeListenerService.class));
 	}
 	
