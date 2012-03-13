@@ -10,7 +10,7 @@ import android.os.SystemClock;
 public class Shaker
 {
 	private SensorManager sensorMgr = null;	// Used for accessing Accelerometer
-	private double threshold = 2.25d;		// Threshold for detecting shakes
+	private double threshold = 3.45d;		// Threshold for detecting shakes
 	private long gap = 1500;				// Minimum time (ms) between shakes
 	private long lastShakeTimestamp = 0;
 	private Shaker.Callback cb = null;
