@@ -47,6 +47,7 @@ public class ShakeListenerService extends Service implements Shaker.Callback
 	 */
 	public void shakingStarted() 
 	{
+		vib.vibrate(700);
 		Log.d(LOG_TAG, "Shaking started.");
 	}
 
@@ -56,7 +57,6 @@ public class ShakeListenerService extends Service implements Shaker.Callback
 	public void shakingStopped()
 	{
 		Log.d(LOG_TAG, "Shaking stopped.");
-		vib.vibrate(700);
 		Context context = getApplicationContext();
 		CharSequence text = "Shake Detected";
 		int duration = Toast.LENGTH_SHORT;
