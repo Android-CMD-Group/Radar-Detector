@@ -10,14 +10,13 @@ import android.widget.Toast;
 
 public class ShakeListenerService extends Service implements Shaker.Callback
 {
-	static final String LOG_TAG = "ShakeListenerService";
 	private Shaker shaker = null;
 	private Vibrator vib = null;
 
 	@Override
 	public void onCreate()
 	{
-		Log.d(LOG_TAG, "ShakeListenerService created.");
+		Log.d(MainSettingsActivity.LOG_TAG_SHAKE_LISTENER, "ShakeListenerService created.");
 		super.onCreate();
 		this.vib = (Vibrator) this.getSystemService(VIBRATOR_SERVICE);
 		this.shaker = new Shaker(this, this);
@@ -26,7 +25,7 @@ public class ShakeListenerService extends Service implements Shaker.Callback
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId)
 	{
-		Log.d(LOG_TAG, "ShakeListenerService onStartCommand()");
+		Log.d(MainSettingsActivity.LOG_TAG_SHAKE_LISTENER, "ShakeListenerService onStartCommand()");
 		return super.onStartCommand(intent, flags, startId);
 	}
 
@@ -47,7 +46,7 @@ public class ShakeListenerService extends Service implements Shaker.Callback
 	public void shakingStarted() 
 	{
 		vib.vibrate(700);
-		Log.d(LOG_TAG, "Shaking started.");
+		Log.d(MainSettingsActivity.LOG_TAG_SHAKE_LISTENER, "Shaking started.");
 	}
 
 	/**
@@ -55,7 +54,7 @@ public class ShakeListenerService extends Service implements Shaker.Callback
 	 */
 	public void shakingStopped()
 	{
-		Log.d(LOG_TAG, "Shaking stopped.");
+		Log.d(MainSettingsActivity.LOG_TAG_SHAKE_LISTENER, "Shaking stopped.");
 		Context context = getApplicationContext();
 		CharSequence text = "Shake Detected";
 		int duration = Toast.LENGTH_SHORT;
