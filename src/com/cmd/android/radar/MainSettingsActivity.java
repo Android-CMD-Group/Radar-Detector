@@ -1,38 +1,40 @@
 package com.cmd.android.radar;
 
 import android.app.Activity;
-import android.app.PendingIntent;
-import android.content.Context;
 import android.content.Intent;
-import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 
 public class MainSettingsActivity extends Activity {
 
+	public static final String LOG_TAG = "Radar-Detector";
+	
 	/**
 	 * Log tag used to show processes of finding out whether user is driving or
 	 * not
 	 */
 	public static final String LOG_TAG_CHECK_FOR_DRIVING = "Radar-Detector.checkForDriving";
 	public static final String LOG_TAG_TRAP_REPORT = "Radar-Detector.trapReport";
-	public static final String TIME_REPORTED_PREF_KEY = "TIME_REPORTED_PREF_KEY";
+	static final String LOG_TAG_SHAKE_LISTENER = "ShakeListenerService";
+
 
 	/** Called when the activity is first created. */
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
-		Log.d(MainSettingsActivity.LOG_TAG_CHECK_FOR_DRIVING, getPackageName());
-		long time = System.currentTimeMillis();
-		LocationManager locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
-		
-		Intent intent = new Intent("com.cmd.android.radar.TRAP_LOCATION_RECEIVED");
-		Bundle bundle = new Bundle();
-		bundle.putLong(TIME_REPORTED_PREF_KEY, time);
-		intent.putExtras(bundle);
-		PendingIntent pendingIntent = PendingIntent.getBroadcast(getApplicationContext(),
-		    0, intent, 0);
-		locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, pendingIntent);
+		Log.d(MainSettingsActivity.LOG_TAG, "MainSettingsActivity created");
+	}
+	
+	// Starts the ShakeListenerService
+	public void launchShakeListener(View v) {
+		startService(new Intent(this, ShakeListenerService.class));
+	}
+	
+	// Kills the ShakeListenerService.
+	// Look into binding to the activity.
+	public void killShakeListener(View v) {
+		this.stopService(new Intent(this, ShakeListenerService.class));
 	}
 }

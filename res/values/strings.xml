@@ -3,5 +3,7 @@
 
     <string name="hello">Hello World, MainSettingsActivity!</string>
     <string name="app_name">Radar-Detector</string>
+    <string name="start_shakelistener">Start ShakeListener</string>
+    <string name="stop_shakelistener">Stop ShakeListener</string>
 
 </resources>

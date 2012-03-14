@@ -6,11 +6,12 @@
 
     <uses-sdk android:minSdkVersion="8" />
 
-	<uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:icon="@drawable/ic_launcher"
@@ -25,24 +26,23 @@
             </intent-filter>
         </activity>
 
-        <service
-            android:name=".DriveListenerService">
+        <service android:name=".DriveListenerService" >
         </service>
         
-        <service
-            android:name=".TrapReportUploadingService">
+        <service android:name=".TrapReportUploadingService" >
+        </service>
+        
+        <service android:name=".ShakeListenerService" >
         </service>
 
         <receiver android:name="com.cmd.android.radar.WifiChangeReceiver" >
             <intent-filter>
-                
                 <action android:name="com.cmd.android.radar.TIMER_FOR_LOCATION_SLEEP" >
                 </action>
-                
                 <action android:name="android.net.wifi.STATE_CHANGE" >
                 </action>
             </intent-filter>
-        </receiver>	
+        </receiver>
         
         <receiver android:name="com.cmd.android.radar.TrapLocationReceiver" >
             <intent-filter>

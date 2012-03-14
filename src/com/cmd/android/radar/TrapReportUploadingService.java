@@ -50,7 +50,7 @@ public class TrapReportUploadingService extends IntentService {
 			jsonWriter.name("speed").value(location.getSpeed());
 			jsonWriter.name("bearing").value(location.getBearing());
 			jsonWriter.name("timeReported").value(
-					b.getLong(MainSettingsActivity.TIME_REPORTED_PREF_KEY));
+					b.getLong(ShakeListenerService.TIME_REPORTED_PREF_KEY));
 			jsonWriter.name("timeOfLocation").value(location.getTime());
 			jsonWriter.name("id").value(
 					Secure.getString(getContentResolver(), Secure.ANDROID_ID));
