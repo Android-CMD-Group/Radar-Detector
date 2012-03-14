@@ -11,7 +11,6 @@ import android.widget.Toast;
 public class ShakeListenerService extends Service implements Shaker.Callback
 {
 	static final String LOG_TAG = "ShakeListenerService";
-	private static final double THRESHOLD = 2.25;
 	private Shaker shaker = null;
 	private Vibrator vib = null;
 
@@ -68,5 +67,4 @@ public class ShakeListenerService extends Service implements Shaker.Callback
 	{
 		return null;
 	}
-
 }

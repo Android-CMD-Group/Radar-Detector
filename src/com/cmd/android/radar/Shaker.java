@@ -11,7 +11,7 @@ public class Shaker
 {
 	private SensorManager sensorMgr = null;	// Used for accessing Accelerometer
 	private double threshold = 3.45d;		// Threshold for detecting shakes
-	private long gap = 1500;				// Minimum time (ms) between shakes
+	private long gap = 2000;				// Minimum time (ms) between shakes
 	private long lastShakeTimestamp = 0;
 	private Shaker.Callback cb = null;
 
@@ -32,7 +32,7 @@ public class Shaker
 				double netForce = Math.pow(event.values[0], 2);
 				netForce += Math.pow(event.values[1], 2);
 				netForce += Math.pow(event.values[2], 2);
-	
+				
 				if (netForce > threshold) 
 					isShaking();
 				else 
