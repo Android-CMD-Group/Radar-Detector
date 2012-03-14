@@ -14,6 +14,8 @@ public class MainSettingsActivity extends Activity {
 	// Buttons for starting and stopping the ShakeListenerService
 	private Button startShakeListener;
 
+	static final String LOG_TAG_SHAKE_LISTENER = "ShakeListenerService";
+
 	/**
 	 * Log tag used to show processes of finding out whether user is driving or
 	 * not
