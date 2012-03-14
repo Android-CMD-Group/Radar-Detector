@@ -10,6 +10,7 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
      <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+     <uses-permission android:name="android.permission.VIBRATE"/>
     
 
     <application
@@ -27,6 +28,10 @@
 
         <service
             android:name=".DriveListenerService">
+        </service>
+         <service
+            android:name=".ShakeListenerService"
+            android:process=":shake_listener">
         </service>
 
         <receiver android:name="com.cmd.android.radar.WifiChangeReceiver" >
