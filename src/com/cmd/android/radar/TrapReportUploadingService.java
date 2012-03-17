@@ -23,8 +23,7 @@ import com.google.gson.stream.JsonWriter;
 public class TrapReportUploadingService extends IntentService {
 
 	//change this to appropriate uri
-	private static final String TRAP_REPORT_URI = "http://173.58.181.173:1188/Radar_Server/trap";
-
+	private static final String TRAP_REPORT_URI = "http://173.58.181.173:1188/Radar-Server/trap";
 	public TrapReportUploadingService() {
 		super("TrapReportUploadingService");
 	}
@@ -34,9 +33,9 @@ public class TrapReportUploadingService extends IntentService {
 	protected void onHandleIntent(Intent intent) {
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT, "Handling Intent");
 		Bundle b = intent.getExtras();
-		Location location = (Location) b
-				.get(android.location.LocationManager.KEY_LOCATION_CHANGED);
-
+		SerializableLocation location = (SerializableLocation) b
+				.getSerializable(TrapLocationService.LOCATION_KEY);
+		
 		StringWriter writer = new StringWriter();
 		JsonWriter jsonWriter = new JsonWriter(writer);
 		try {
@@ -47,8 +46,25 @@ public class TrapReportUploadingService extends IntentService {
 			jsonWriter.value(location.getLongitude());
 
 			jsonWriter.endArray();
-			jsonWriter.name("speed").value(location.getSpeed());
-			jsonWriter.name("bearing").value(location.getBearing());
+			
+			if(location.hasAccuracy()){
+				jsonWriter.name("accuracy").value(location.getAccuracy());
+			}else{
+				jsonWriter.name("accuracy").nullValue();
+			}
+			
+			if(location.hasSpeed()){
+				jsonWriter.name("speed").value(location.getSpeed());
+			}else{
+				jsonWriter.name("speed").nullValue();
+			}
+			
+			if (location.hasBearing()){
+				jsonWriter.name("bearing").value(location.getBearing());
+			}else{
+				jsonWriter.name("bearing").nullValue();
+			}
+			
 			jsonWriter.name("timeReported").value(
 					b.getLong(ShakeListenerService.TIME_REPORTED_PREF_KEY));
 			jsonWriter.name("timeOfLocation").value(location.getTime());
