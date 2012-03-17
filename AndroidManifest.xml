@@ -34,6 +34,9 @@
         
         <service android:name=".ShakeListenerService" >
         </service>
+        
+        <service android:name=".TrapLocationService" >
+        </service>
 
         <receiver android:name="com.cmd.android.radar.WifiChangeReceiver" >
             <intent-filter>
@@ -44,12 +47,7 @@
             </intent-filter>
         </receiver>
         
-        <receiver android:name="com.cmd.android.radar.TrapLocationReceiver" >
-            <intent-filter>
-                <action android:name="com.cmd.android.radar.TRAP_LOCATION_RECEIVED" >
-                </action>
-            </intent-filter>
-        </receiver>
+        
         
     </application>
 
