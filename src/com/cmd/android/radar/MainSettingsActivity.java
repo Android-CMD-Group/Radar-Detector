@@ -16,7 +16,7 @@ public class MainSettingsActivity extends Activity {
 	 */
 	public static final String LOG_TAG_CHECK_FOR_DRIVING = "Radar-Detector.checkForDriving";
 	public static final String LOG_TAG_TRAP_REPORT = "Radar-Detector.trapReport";
-	static final String LOG_TAG_SHAKE_LISTENER = "ShakeListenerService";
+	static final String LOG_TAG_SHAKE_LISTENER = "Radar-Detector.shakeListener";
 
 
 	/** Called when the activity is first created. */
