@@ -27,10 +27,11 @@ public class ShakeListenerService extends Service implements Shaker.Callback {
 	}
 
 	@Override
-	public int onStartCommand(Intent intent, int flags, int startId) {
-		Log.d(MainSettingsActivity.LOG_TAG_SHAKE_LISTENER,
-				"ShakeListenerService onStartCommand()");
-		return super.onStartCommand(intent, flags, startId);
+
+	public int onStartCommand(Intent intent, int flags, int startId)
+	{
+		Log.d(MainSettingsActivity.LOG_TAG_SHAKE_LISTENER, "ShakeListenerService onStartCommand()");
+		return START_STICKY;
 	}
 
 	/**

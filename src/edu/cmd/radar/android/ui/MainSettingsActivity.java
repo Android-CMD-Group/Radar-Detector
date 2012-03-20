@@ -1,6 +1,5 @@
 package edu.cmd.radar.android.ui;
 
-
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
