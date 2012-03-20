@@ -79,7 +79,7 @@ public class DriveListenerService extends Service {
 	 * The unique action id for the intent that launches the WifiChangeReceiver
 	 * after the timer expires
 	 */
-	public static final String TIMER_FOR_LOCATION_SLEEP = "com.cmd.android.radar.TIMER_FOR_LOCATION_SLEEP";
+	public static final String TIMER_FOR_LOCATION_SLEEP = "edu.cmd.radar.android.drive.TIMER_FOR_LOCATION_SLEEP";
 
 	private static final String UNIQUE_ID_KEY = "UNIQUE_ID_KEY";
 
@@ -224,7 +224,7 @@ public class DriveListenerService extends Service {
 		// If it's only the first time, pack up the location and sleep
 		if (firstFixStateIndicator) {
 			Intent intentForNextFix = new Intent(
-					"com.cmd.android.radar.WifiChangeReceiver");
+					WifiChangeReceiver.class.getName());
 
 			intentForNextFix.setAction(TIMER_FOR_LOCATION_SLEEP);
 
