@@ -1,4 +1,4 @@
-package com.cmd.android.radar;
+package edu.cmd.radar.android.shake;
 
 import android.app.Service;
 import android.content.Intent;
@@ -7,6 +7,10 @@ import android.os.IBinder;
 import android.os.Vibrator;
 import android.util.Log;
 import android.widget.Toast;
+
+import com.cmd.android.radar.TrapLocationService;
+
+import edu.cmd.radar.android.ui.MainSettingsActivity;
 
 public class ShakeListenerService extends Service implements Shaker.Callback {
 	public static final String TIME_REPORTED_PREF_KEY = "TIME_REPORTED_PREF_KEY";

@@ -1,5 +1,6 @@
-package com.cmd.android.radar;
+package edu.cmd.radar.android.drive;
 
+import edu.cmd.radar.android.ui.MainSettingsActivity;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
@@ -118,7 +119,7 @@ public class WifiChangeReceiver extends BroadcastReceiver {
 	}
 
 	private PendingIntent doesPendingIntentExist(Context context) {
-		String pname = "com.cmd.android.radar";
+		String pname = "edu.cmd.radar.android.drive";
 		// manufacture an appropriate context
 		Context mycontext = null;
 		try {
@@ -131,7 +132,7 @@ public class WifiChangeReceiver extends BroadcastReceiver {
 		// and generate a pending intent
 
 		Intent intentForNextFix = new Intent(
-				"com.cmd.android.radar.WifiChangeReceiver");
+				"edu.cmd.radar.android.drive.WifiChangeReceiver");
 
 		intentForNextFix
 				.setAction(DriveListenerService.TIMER_FOR_LOCATION_SLEEP);

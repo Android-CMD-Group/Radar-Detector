@@ -1,4 +1,4 @@
-package com.cmd.android.radar;
+package edu.cmd.radar.android.location;
 
 import java.util.ArrayList;
 import java.util.Collection;

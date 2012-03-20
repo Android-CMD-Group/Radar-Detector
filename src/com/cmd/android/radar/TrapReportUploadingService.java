@@ -13,12 +13,15 @@ import org.apache.http.impl.client.DefaultHttpClient;
 
 import android.app.IntentService;
 import android.content.Intent;
-import android.location.Location;
 import android.os.Bundle;
 import android.provider.Settings.Secure;
 import android.util.Log;
 
 import com.google.gson.stream.JsonWriter;
+
+import edu.cmd.radar.android.location.SerializableLocation;
+import edu.cmd.radar.android.shake.ShakeListenerService;
+import edu.cmd.radar.android.ui.MainSettingsActivity;
 
 public class TrapReportUploadingService extends IntentService {
 

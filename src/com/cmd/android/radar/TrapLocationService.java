@@ -1,6 +1,5 @@
 package com.cmd.android.radar;
 
-import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -11,6 +10,9 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.SystemClock;
 import android.util.Log;
+import edu.cmd.radar.android.location.SerializableLocation;
+import edu.cmd.radar.android.shake.ShakeListenerService;
+import edu.cmd.radar.android.ui.MainSettingsActivity;
 
 public class TrapLocationService extends Service {
 

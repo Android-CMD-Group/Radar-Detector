@@ -1,5 +1,6 @@
-package com.cmd.android.radar;
+package edu.cmd.radar.android.shake;
 
+import edu.cmd.radar.android.ui.MainSettingsActivity;
 import android.content.Context;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
