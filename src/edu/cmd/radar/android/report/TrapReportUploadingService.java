@@ -1,4 +1,4 @@
-package com.cmd.android.radar;
+package edu.cmd.radar.android.report;
 
 import java.io.IOException;
 import java.io.StringWriter;

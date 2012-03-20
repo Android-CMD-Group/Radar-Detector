@@ -1,4 +1,4 @@
-package com.cmd.android.radar;
+package edu.cmd.radar.android.report;
 
 import android.app.Service;
 import android.content.Context;

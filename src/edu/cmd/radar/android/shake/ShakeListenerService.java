@@ -8,8 +8,8 @@ import android.os.Vibrator;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.cmd.android.radar.TrapLocationService;
 
+import edu.cmd.radar.android.report.TrapLocationService;
 import edu.cmd.radar.android.ui.MainSettingsActivity;
 
 public class ShakeListenerService extends Service implements Shaker.Callback {
