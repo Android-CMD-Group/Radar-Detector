@@ -14,7 +14,7 @@ import android.util.Log;
 
 public class TrapLocationService extends Service {
 
-	private static final long MAX_TIME_FOR_SPEED_AND_BEARING = 20000;
+	private static final long MAX_TIME_FOR_SPEED_AND_BEARING = 35000;
 	public static boolean isRunning = false;
 	private Location firstLocation = null;
 	private LocationManager locationManager = null;
@@ -33,7 +33,7 @@ public class TrapLocationService extends Service {
 		locationManager = (LocationManager) this
 				.getSystemService(Context.LOCATION_SERVICE);
 		locationListener = new GpsListener();
-		locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0,
+		locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5,
 				0, locationListener);
 		return super.onStartCommand(intent, flags, startId);
 	}
