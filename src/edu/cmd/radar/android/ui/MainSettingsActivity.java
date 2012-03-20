@@ -1,15 +1,13 @@
 package edu.cmd.radar.android.ui;
 
-import com.cmd.android.radar.R;
-
-import edu.cmd.radar.android.shake.ShakeListenerService;
-
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import edu.cmd.radar.android.R;
+import edu.cmd.radar.android.shake.ShakeListenerService;
 
 public class MainSettingsActivity extends Activity {
 
