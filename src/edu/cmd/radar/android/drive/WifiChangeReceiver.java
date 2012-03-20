@@ -119,7 +119,8 @@ public class WifiChangeReceiver extends BroadcastReceiver {
 	}
 
 	private PendingIntent doesPendingIntentExist(Context context) {
-		String pname = "edu.cmd.radar.android.drive";
+		// application package name
+		String pname = "edu.cmd.radar.android";
 		// manufacture an appropriate context
 		Context mycontext = null;
 		try {
