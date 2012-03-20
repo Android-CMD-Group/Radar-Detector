@@ -119,7 +119,7 @@ public class WifiChangeReceiver extends BroadcastReceiver {
 	}
 
 	private PendingIntent doesPendingIntentExist(Context context) {
-		String pname = "com.cmd.android.radar";
+		String pname = "edu.cmd.radar.android.drive";
 		// manufacture an appropriate context
 		Context mycontext = null;
 		try {
@@ -132,7 +132,7 @@ public class WifiChangeReceiver extends BroadcastReceiver {
 		// and generate a pending intent
 
 		Intent intentForNextFix = new Intent(
-				"com.cmd.android.radar.WifiChangeReceiver");
+				"edu.cmd.radar.android.drive.WifiChangeReceiver");
 
 		intentForNextFix
 				.setAction(DriveListenerService.TIMER_FOR_LOCATION_SLEEP);
