@@ -21,6 +21,9 @@ public class SerializableLocation implements Serializable {
 	private String provider;
 	private float speed;
 	private long time;
+	private boolean hasAccuracy;
+	private boolean hasBearing;
+	private boolean hasSpeed;
 
 	/**
 	 * Takes a location obejct and copies its members into this new object
@@ -36,9 +39,14 @@ public class SerializableLocation implements Serializable {
 		provider = originalLocationObject.getProvider();
 		speed = originalLocationObject.getSpeed();
 		time = originalLocationObject.getTime();
+		hasAccuracy = originalLocationObject.hasAccuracy();
+		hasBearing = originalLocationObject.hasBearing();
+		hasSpeed = originalLocationObject.hasSpeed();
 
 	}
 
+	
+	
 	public SerializableLocation() {
 		// TODO Auto-generated constructor stub
 	}
@@ -61,15 +69,15 @@ public class SerializableLocation implements Serializable {
 	}
 
 	public boolean hasAccuracy() {
-		return accuracy != 0.0;
+		return hasAccuracy;
 	}
 
 	public boolean hasBearing() {
-		return bearing != 0.0;
+		return hasBearing;
 	}
 
 	public boolean hasSpeed() {
-		return speed != 0.0f;
+		return hasSpeed;
 	}
 
 	public double getAccuracy() {
