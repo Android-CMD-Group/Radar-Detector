@@ -26,13 +26,13 @@
             </intent-filter>
         </activity>
 
-        <service android:name=".DriveListenerService" >
+        <service android:name=".drive.DriveListenerService" >
         </service>
         
-        <service android:name=".TrapReportUploadingService" >
+        <service android:name=".report.TrapReportUploadingService" >
         </service>
                 
-        <service android:name=".TrapLocationService" > </service>
+        <service android:name=".report.TrapLocationService" > </service>
 
          <service
             android:name=".shake.ShakeListenerService"
