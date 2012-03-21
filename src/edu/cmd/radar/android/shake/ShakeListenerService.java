@@ -47,13 +47,20 @@ public class ShakeListenerService extends Service implements Shaker.Callback {
 	 * Perform action when shaking begins.
 	 */
 	public void shakingStarted() {
+		
+		// always vibrate, even of the service is already running
 		vib.vibrate(700);
 		Log.d(MainSettingsActivity.LOG_TAG_SHAKE_LISTENER, "Shaking started.");
+		
+		// no support for simultaneous reporting
 		if (!TrapLocationService.isRunning) {
 			Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT, "Grabbing location");
 			
+			// Get the location and send it to the server
 			Intent i = new Intent(this, TrapLocationService.class);
 			Bundle b = new Bundle();
+			
+			// due to gps startup time, send the server the actual report time so it can calculate the actual location.
 			b.putLong(TIME_REPORTED_PREF_KEY, System.currentTimeMillis());
 			i.putExtras(b);
 			startService(i);

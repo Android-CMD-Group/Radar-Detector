@@ -23,11 +23,19 @@ import edu.cmd.radar.android.location.SerializableLocation;
 import edu.cmd.radar.android.shake.ShakeListenerService;
 import edu.cmd.radar.android.ui.MainSettingsActivity;
 
+/**
+ * Service that handles intents one at a time until there are no more. Uploads
+ * JSON to the server.
+ */
 public class TrapReportUploadingService extends IntentService {
 
-	//change this to appropriate uri
+	/**
+	 * URI of server to upload JSON info to
+	 */
 	private static final String TRAP_REPORT_URI = "http://173.58.181.173:1188/Radar-Server/trap";
+
 	public TrapReportUploadingService() {
+		// name of service
 		super("TrapReportUploadingService");
 	}
 
@@ -36,9 +44,12 @@ public class TrapReportUploadingService extends IntentService {
 	protected void onHandleIntent(Intent intent) {
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT, "Handling Intent");
 		Bundle b = intent.getExtras();
+		
+		// location info
 		SerializableLocation location = (SerializableLocation) b
 				.getSerializable(TrapLocationService.LOCATION_KEY);
-		
+
+		// using GSON library, convert location into a JSON object string
 		StringWriter writer = new StringWriter();
 		JsonWriter jsonWriter = new JsonWriter(writer);
 		try {
@@ -49,38 +60,50 @@ public class TrapReportUploadingService extends IntentService {
 			jsonWriter.value(location.getLongitude());
 
 			jsonWriter.endArray();
-			
-			if(location.hasAccuracy()){
+
+			// not all location info may be valid
+			if (location.hasAccuracy()) {
 				jsonWriter.name("accuracy").value(location.getAccuracy());
-			}else{
+			} else {
 				jsonWriter.name("accuracy").nullValue();
 			}
+
 			
-			if(location.hasSpeed()){
+			if (location.hasSpeed()) {
 				jsonWriter.name("speed").value(location.getSpeed());
-			}else{
+			} else {
 				jsonWriter.name("speed").nullValue();
 			}
-			
-			if (location.hasBearing()){
+
+			if (location.hasBearing()) {
 				jsonWriter.name("bearing").value(location.getBearing());
-			}else{
+			} else {
 				jsonWriter.name("bearing").nullValue();
 			}
-			
+
+			// send the original time reported
 			jsonWriter.name("timeReported").value(
 					b.getLong(ShakeListenerService.TIME_REPORTED_PREF_KEY));
+			
+			// as well as the time that the first location was fixed
 			jsonWriter.name("timeOfLocation").value(location.getTime());
+			
+			// get the native android ID
 			jsonWriter.name("id").value(
 					Secure.getString(getContentResolver(), Secure.ANDROID_ID));
 
 			jsonWriter.endObject();
 		} catch (IOException e) {
-			Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT, "Problem writing JSON");
+			Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT,
+					"Problem writing JSON");
 			e.printStackTrace();
 		}
+		
+		// convert to string
 		String toSend = writer.toString();
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT, toSend);
+		
+		// encode for sending to server
 		StringEntity se = null;
 		try {
 			se = new StringEntity(toSend);
@@ -88,14 +111,17 @@ public class TrapReportUploadingService extends IntentService {
 			e.printStackTrace();
 		}
 
-		
+		// use http client to make a POST request and put the JSON as the message
 		DefaultHttpClient httpclient = new DefaultHttpClient();
 		HttpPost httpost = new HttpPost(TRAP_REPORT_URI);
 		httpost.setEntity(se);
-	    httpost.setHeader("Content-type", "application/json");
-	    
-	    ResponseHandler responseHandler = new BasicResponseHandler();
-	    try {
+		httpost.setHeader("Content-type", "application/json");
+
+		//TODO Handle case when the phone does not have Internet. Write info to file? send later.
+		
+		// Do nothing with the response for now. Later may want to save the info for later and re-send
+		ResponseHandler responseHandler = new BasicResponseHandler();
+		try {
 			httpclient.execute(httpost, responseHandler);
 		} catch (ClientProtocolException e) {
 
