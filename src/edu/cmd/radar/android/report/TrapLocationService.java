@@ -16,7 +16,7 @@ import edu.cmd.radar.android.ui.MainSettingsActivity;
 
 public class TrapLocationService extends Service {
 
-	private static final long MAX_TIME_FOR_SPEED_AND_BEARING = 35000;
+	private static final long MAX_TIME_FOR_SPEED_AND_BEARING = 50000;
 	public static boolean isRunning = false;
 	private Location firstLocation = null;
 	private LocationManager locationManager = null;
@@ -27,7 +27,6 @@ public class TrapLocationService extends Service {
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		serviceStartTime = SystemClock.uptimeMillis();
 		TrapLocationService.isRunning = true;
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT,
 				"TrapLocationService started");
@@ -35,8 +34,8 @@ public class TrapLocationService extends Service {
 		locationManager = (LocationManager) this
 				.getSystemService(Context.LOCATION_SERVICE);
 		locationListener = new GpsListener();
-		locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5,
-				0, locationListener);
+		locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10000,
+				1, locationListener);
 		return super.onStartCommand(intent, flags, startId);
 	}
 
@@ -77,6 +76,7 @@ public class TrapLocationService extends Service {
 		public void onLocationChanged(Location location) {
 			Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT, "Location Changed");
 			if (firstLocation == null) {
+				serviceStartTime = SystemClock.uptimeMillis();
 				firstLocation = location;
 			}
 
