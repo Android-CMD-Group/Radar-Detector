@@ -52,7 +52,6 @@ public class TrapCheckServerPullService extends Service {
 
 	private static final String TRAP_CHECK_URI = "http://domain/servlet/post";
 	private BroadcastReceiver receiver;
-	private SerializableLocation currentLocation;
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
@@ -63,6 +62,7 @@ public class TrapCheckServerPullService extends Service {
 		receiver = new BroadcastReceiver() {
 			@Override
 			public void onReceive(Context context, Intent i) {
+				
 				unregisterReceiver(receiver);
 
 				locationRecieved(i);
@@ -78,43 +78,38 @@ public class TrapCheckServerPullService extends Service {
 	}
 
 	protected void locationRecieved(Intent i) {
-		currentLocation = (SerializableLocation) i.getExtras().getSerializable(
+		
+		SerializableLocation currentLocation = (SerializableLocation) i.getExtras().getSerializable(
 				SpeedAndBearingLoactionService.LOCATION_KEY);
 
-		InputStream jsonStream = getTrapLocationsFromServer(currentLocation);
+		String toSend = writeInfoToJsonString(currentLocation);
+		
+		InputStream jsonStream = getTrapLocationsFromServer(toSend);
 
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		TrapLocations trapLocations = streamToTrapLocation(jsonStream, currentLocation);
 
-		copyInStreamToByteOutStream(jsonStream, baos);
+		long timeToSleep = getTimeToSleep(trapLocations, currentLocation);
 
-		InputStream streamForFile = new ByteArrayInputStream(baos.toByteArray());
+		setAlarm(timeToSleep, trapLocations, currentLocation);
+		
+		stopSelf();
+	}
 
-		writeJsonToFile(streamForFile);
-
-		InputStream streamForObject = new ByteArrayInputStream(
-				baos.toByteArray());
-
-		TrapLocations trapLocations = streamToTrapLocation(streamForObject);
-
-		try {
-			baos.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-		long timeToSleep = getTimeToSleep(trapLocations);
-
+	private void setAlarm(long timeToSleep, TrapLocations trapLocations, SerializableLocation currentLocation) {
 		Intent intentForNextFix = new Intent(TrapCheckReceiver.class.getName());
 
 		intentForNextFix.setAction(TrapCheckReceiver.CHECK_DISTANCE_FROM_TRAPS_ACTION);
 
 		Bundle extraBundle = new Bundle();
+		
+		
 		extraBundle.putSerializable(TrapCheckWakeUpService.LOCATION_KEY,
 				currentLocation);
 
 		extraBundle.putLong(TrapCheckWakeUpService.LAST_TIME_KEY, System.currentTimeMillis());
 		intentForNextFix.putExtras(extraBundle);
+		
+		extraBundle.putSerializable(TrapCheckWakeUpService.TRAP_LOCATIONS_INFO_KEY, trapLocations);
 
 		PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0,
 				intentForNextFix, 0);
@@ -123,143 +118,30 @@ public class TrapCheckServerPullService extends Service {
 		AlarmManager alarmManager = (AlarmManager) getSystemService(Service.ALARM_SERVICE);
 		alarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis()
 				+ timeToSleep, pendingIntent);
-		
-		stopSelf();
 	}
 
-	private void copyInStreamToByteOutStream(InputStream jsonStream,
-			ByteArrayOutputStream baos) {
-		byte[] buffer = new byte[1024];
-		int len;
-		try {
-			while ((len = jsonStream.read(buffer)) > -1) {
-				baos.write(buffer, 0, len);
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		try {
-			baos.flush();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		try {
-			jsonStream.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-
-	private void writeJsonToFile(InputStream streamForFile) {
-		FileOutputStream file = null;
-		try {
-			file = this.openFileOutput(TrapCheckWakeUpService.TRAP_LOCATIONS_INFO_FILE_NAME,
-					Context.MODE_PRIVATE);
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		int read = 0;
-		byte[] bytes = new byte[1024];
-		try {
-			while ((read = streamForFile.read(bytes)) != -1) {
-				file.write(bytes, 0, read);
-			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		try {
-			file.flush();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		try {
-			file.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		try {
-			streamForFile.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-
-	private long getTimeToSleep(TrapLocations trapLocations) {
+	private long getTimeToSleep(TrapLocations trapLocations, SerializableLocation currentLocation) {
 
 		ArrayList<Float> distances = (ArrayList<Float>) trapLocations
 				.getDistanceList();
 		Float dis = Collections.min(distances);
-		ArrayList<Location> locList = (ArrayList<Location>) trapLocations
+		ArrayList<SerializableLocation> locList = (ArrayList<SerializableLocation>) trapLocations
 				.getLocationList();
-		Location closest = locList.get(distances.indexOf(dis));
+		SerializableLocation closest = locList.get(distances.indexOf(dis));
 
 		return  (long) ((long) (dis / currentLocation.getSpeed()) * 1000 * TrapCheckWakeUpService.RATIO_OF_DISTANCE_TO_WAIT);
 	}
 
-	@Override
-	public void onCreate() {
-		// TODO Auto-generated method stub
-		super.onCreate();
-	}
+	private InputStream getTrapLocationsFromServer(String jsonInfo) {
 
-	private InputStream getTrapLocationsFromServer(SerializableLocation loc) {
 
-		StringWriter writer = new StringWriter();
-		JsonWriter jsonWriter = new JsonWriter(writer);
-		try {
-			jsonWriter.beginObject();
-			jsonWriter.name("loc");
-			jsonWriter.beginArray();
-			jsonWriter.value(loc.getLatitude());
-			jsonWriter.value(loc.getLongitude());
-
-			jsonWriter.endArray();
-
-			// not all location info may be valid
-			if (loc.hasAccuracy()) {
-				jsonWriter.name("accuracy").value(loc.getAccuracy());
-			} else {
-				jsonWriter.name("accuracy").nullValue();
-			}
-
-			if (loc.hasSpeed()) {
-				jsonWriter.name("speed").value(loc.getSpeed());
-			} else {
-				jsonWriter.name("speed").nullValue();
-			}
-
-			if (loc.hasBearing()) {
-				jsonWriter.name("bearing").value(loc.getBearing());
-			} else {
-				jsonWriter.name("bearing").nullValue();
-			}
-			// get the native android ID
-			jsonWriter.name("id").value(
-					Secure.getString(getContentResolver(), Secure.ANDROID_ID));
-
-			jsonWriter.endObject();
-		} catch (IOException e) {
-			Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT,
-					"Problem writing JSON");
-			e.printStackTrace();
-		}
-
-		// convert to string
-		String toSend = writer.toString();
 
 		InputStream stream = null;
 		String result = "";
 
 		StringEntity se = null;
 		try {
-			se = new StringEntity(toSend);
+			se = new StringEntity(jsonInfo);
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
 		}
@@ -310,7 +192,53 @@ public class TrapCheckServerPullService extends Service {
 		return stream;
 	}
 
-	private TrapLocations streamToTrapLocation(InputStream stream) {
+	private String writeInfoToJsonString(SerializableLocation loc) {
+		StringWriter writer = new StringWriter();
+		JsonWriter jsonWriter = new JsonWriter(writer);
+		try {
+			jsonWriter.beginObject();
+			jsonWriter.name("loc");
+			jsonWriter.beginArray();
+			jsonWriter.value(loc.getLatitude());
+			jsonWriter.value(loc.getLongitude());
+
+			jsonWriter.endArray();
+
+			// not all location info may be valid
+			if (loc.hasAccuracy()) {
+				jsonWriter.name("accuracy").value(loc.getAccuracy());
+			} else {
+				jsonWriter.name("accuracy").nullValue();
+			}
+
+			if (loc.hasSpeed()) {
+				jsonWriter.name("speed").value(loc.getSpeed());
+			} else {
+				jsonWriter.name("speed").nullValue();
+			}
+
+			if (loc.hasBearing()) {
+				jsonWriter.name("bearing").value(loc.getBearing());
+			} else {
+				jsonWriter.name("bearing").nullValue();
+			}
+			// get the native android ID
+			jsonWriter.name("id").value(
+					Secure.getString(getContentResolver(), Secure.ANDROID_ID));
+
+			jsonWriter.endObject();
+		} catch (IOException e) {
+			Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT,
+					"Problem writing JSON");
+			e.printStackTrace();
+		}
+
+		// convert to string
+		String toSend = writer.toString();
+		return toSend;
+	}
+
+	private TrapLocations streamToTrapLocation(InputStream stream, SerializableLocation currentLocation) {
 		JsonFactory jfactory = new JsonFactory();
 		TrapLocations trapLocations = new TrapLocations();
 		/*** read from file ***/
@@ -349,10 +277,9 @@ public class TrapCheckServerPullService extends Service {
 					}
 				}
 
-				if ("timestamp".equals(fieldname)) {
+				if ("range".equals(fieldname)) {
 					jParser.nextToken();
-					trapLocations.setTimeStamp(jParser.getLongValue());
-
+					trapLocations.setRangeOfPointsFromOrigin(jParser.getFloatValue());
 				}
 
 			}
@@ -372,6 +299,10 @@ public class TrapCheckServerPullService extends Service {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		
+		trapLocations.setOriginalLocation(currentLocation);
+		trapLocations.setTimeStamp(System.currentTimeMillis());
+		
 		return trapLocations;
 	}
 
@@ -381,4 +312,18 @@ public class TrapCheckServerPullService extends Service {
 		return null;
 	}
 
+	@Override
+	public void onCreate() {
+		// TODO Auto-generated method stub
+		super.onCreate();
+	}
+	
+	@Override
+	public void onDestroy() {
+		try {
+			unregisterReceiver(receiver);
+		} catch (Exception e) {
+		}
+		super.onDestroy();
+	}
 }
