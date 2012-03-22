@@ -32,7 +32,8 @@
         <service android:name=".report.TrapReportUploadingService" >
         </service>
                 
-        <service android:name=".report.TrapLocationService" > </service>
+        <service android:name=".location.SpeedAndBearingLoactionService" > </service>
+         <service android:name=".report.TrapReportService" > </service>
 
          <service
             android:name=".shake.ShakeListenerService"

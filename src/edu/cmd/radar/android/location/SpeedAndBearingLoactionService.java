@@ -1,4 +1,4 @@
-package edu.cmd.radar.android.report;
+package edu.cmd.radar.android.location;
 
 import android.app.Service;
 import android.content.Context;
@@ -10,11 +10,12 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.SystemClock;
 import android.util.Log;
-import edu.cmd.radar.android.location.SerializableLocation;
+import edu.cmd.radar.android.report.TrapReportService;
+import edu.cmd.radar.android.report.TrapReportUploadingService;
 import edu.cmd.radar.android.shake.ShakeListenerService;
 import edu.cmd.radar.android.ui.MainSettingsActivity;
 
-public class TrapLocationService extends Service {
+public class SpeedAndBearingLoactionService extends Service {
 
 	/**
 	 * The suggested distance to wait between gps update bursts
@@ -30,11 +31,6 @@ public class TrapLocationService extends Service {
 	 * The suggested time to wait between gps update bursts
 	 */
 	private static final int SUGGESTED_MIN_TIME = 10000;
-
-	/**
-	 * Indicates if the service is running or not.
-	 */
-	public static boolean isRunning = false;
 
 	/**
 	 * The key to the location we serialize
@@ -59,20 +55,12 @@ public class TrapLocationService extends Service {
 	 */
 	private long serviceStartTime = 0;
 
-	/**
-	 * Intent passed eo this service. Contains the time the user shook the
-	 * phone.
-	 */
-	private Intent orginalIntent;
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 
-		// lets system know not to restart this service
-		TrapLocationService.isRunning = true;
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT,
-				"TrapLocationService started");
-		orginalIntent = intent;
+				"SpeedAndBEaringloactionService started");
 
 		// Set up GPS listener
 		locationManager = (LocationManager) this
@@ -97,20 +85,17 @@ public class TrapLocationService extends Service {
 		
 		// Stop getting updates
 		locationManager.removeUpdates(locationListener);
-		Intent serviceIntent = new Intent(this,
-				TrapReportUploadingService.class);
+		Intent intent = new Intent();
 		Bundle b = new Bundle();
 
 		// send loc to next service
-		b.putSerializable(TrapLocationService.LOCATION_KEY,
+		b.putSerializable(SpeedAndBearingLoactionService.LOCATION_KEY,
 				new SerializableLocation(loc));
+		intent.putExtras(b);
+		
+		intent.setAction(TrapReportService.REPORT_LOCATION_OBTAINED_ACTION);
+		sendBroadcast(intent);
 
-		// send original time of shake to next service. -1 is default return value
-		b.putLong(ShakeListenerService.TIME_REPORTED_PREF_KEY, orginalIntent
-				.getLongExtra(ShakeListenerService.TIME_REPORTED_PREF_KEY, -1));
-
-		serviceIntent.putExtras(b);
-		this.startService(serviceIntent);
 		
 		// calls destroy
 		stopSelf();
@@ -120,10 +105,8 @@ public class TrapLocationService extends Service {
 	@Override
 	public void onDestroy() {
 
-		// release recourses and let system know it is ok to start this service
-		// again
+		// release recourses
 		locationManager.removeUpdates(locationListener);
-		TrapLocationService.isRunning = false;
 		super.onDestroy();
 	}
 
