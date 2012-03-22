@@ -10,7 +10,6 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.SystemClock;
 import android.util.Log;
-import edu.cmd.radar.android.report.TrapReportService;
 import edu.cmd.radar.android.report.TrapReportUploadingService;
 import edu.cmd.radar.android.shake.ShakeListenerService;
 import edu.cmd.radar.android.ui.MainSettingsActivity;
@@ -55,6 +54,8 @@ public class SpeedAndBearingLoactionService extends Service {
 	 */
 	private long serviceStartTime = 0;
 
+	public static final String SPEED_AND_BEARING_LOCATION_OBTAINED_ACTION = "edu.cmd.radar.android.report.SPEED_AND BEARING_LOCATION_OBTAINED";
+
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
@@ -93,7 +94,7 @@ public class SpeedAndBearingLoactionService extends Service {
 				new SerializableLocation(loc));
 		intent.putExtras(b);
 		
-		intent.setAction(TrapReportService.REPORT_LOCATION_OBTAINED_ACTION);
+		intent.setAction(SpeedAndBearingLoactionService.SPEED_AND_BEARING_LOCATION_OBTAINED_ACTION);
 		sendBroadcast(intent);
 
 		

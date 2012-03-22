@@ -35,6 +35,8 @@
         <service android:name=".location.SpeedAndBearingLoactionService" > </service>
          <service android:name=".report.TrapReportService" > </service>
 
+         <service android:name=".check.TrapCheckWakeUpService" > </service>
+          <service android:name=".check.TrapCheckServerPullService" > </service>
          <service
             android:name=".shake.ShakeListenerService"
             android:process=":shake_listener">
@@ -49,6 +51,12 @@
             </intent-filter>
         </receiver>
         
+        <receiver android:name=".check.TrapCheckReceiver" >
+            <intent-filter>         
+                <action android:name="edu.cmd.radar.android.check.CHECK_DISTANCE_FROM_TRAPS" >
+                </action>
+            </intent-filter>
+        </receiver>
         
         
     </application>

@@ -7,8 +7,11 @@ import android.content.Intent;
 public class TrapCheckReceiver extends BroadcastReceiver {
 
 	@Override
-	public void onReceive(Context arg0, Intent arg1) {
-		// TODO Auto-generated method stub
+	public void onReceive(Context context, Intent intent) {
+		Intent serviceIntent = new Intent(context, TrapCheckWakeUpService.class);
+		serviceIntent.putExtras(intent);
+		context.startService(serviceIntent);
+		
 
 	}
 

@@ -14,7 +14,6 @@ import edu.cmd.radar.android.ui.MainSettingsActivity;
 
 public class TrapReportService extends Service {
 
-	public static final String REPORT_LOCATION_OBTAINED_ACTION = "edu.cmd.radar.android.report.LOCATION_OBTAINED";
 	/**
 	 * Indicates if the service is running or not.
 	 */
@@ -35,7 +34,7 @@ public class TrapReportService extends Service {
 		// lets system know not to restart this service
 		TrapReportService.isRunning = true;
 		IntentFilter filter = new IntentFilter();
-		filter.addAction(REPORT_LOCATION_OBTAINED_ACTION);
+		filter.addAction(SpeedAndBearingLoactionService.SPEED_AND_BEARING_LOCATION_OBTAINED_ACTION);
 
 		receiver = new BroadcastReceiver() {
 			@Override

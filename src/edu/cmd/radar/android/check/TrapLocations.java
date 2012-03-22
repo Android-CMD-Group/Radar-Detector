@@ -9,6 +9,7 @@ public class TrapLocations {
 
 	private List<Location> locationList;
 	private List<Float> distanceList;
+	
 	private long timeStamp;
 	
 	public void addLocation(double lat, double lon, float accuracy, float speed){
@@ -20,6 +21,9 @@ public class TrapLocations {
 		locationList.add(loc);
 	}
 	
+	public void setDistanceList(List<Float> distanceList) {
+		this.distanceList = distanceList;
+	}
 	
 	public List<Location> getLocationList() {
 		return locationList;
