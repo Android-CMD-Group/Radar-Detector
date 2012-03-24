@@ -54,7 +54,7 @@ public class SpeedAndBearingLoactionService extends Service {
 	 */
 	private long serviceStartTime = 0;
 
-	public static final String SPEED_AND_BEARING_LOCATION_OBTAINED_ACTION = "edu.cmd.radar.android.report.SPEED_AND BEARING_LOCATION_OBTAINED";
+	public static final String SPEED_AND_BEARING_LOCATION_OBTAINED_ACTION = "edu.cmd.radar.android.location.SPEED_AND BEARING_LOCATION_OBTAINED";
 
 
 	@Override
@@ -82,7 +82,7 @@ public class SpeedAndBearingLoactionService extends Service {
 	 * Starts new service to upload the loc and then stops self
 	 * @param loc The location info to upload
 	 */
-	private void startUploadService(Location loc) {
+	private void broadcastLocation(Location loc) {
 		
 		// Stop getting updates
 		locationManager.removeUpdates(locationListener);
@@ -159,7 +159,7 @@ public class SpeedAndBearingLoactionService extends Service {
 			if (firstLocation.hasSpeed() && firstLocation.hasBearing()) {
 				Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT,
 						"fix has speed and bearing");
-				startUploadService(firstLocation);
+				broadcastLocation(firstLocation);
 
 			}
 
@@ -169,7 +169,7 @@ public class SpeedAndBearingLoactionService extends Service {
 			if (SystemClock.uptimeMillis() - serviceStartTime > MAX_TIME_FOR_SPEED_AND_BEARING) {
 				Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT,
 						"Time ran out to get speed and bearing");
-				startUploadService(firstLocation);
+				broadcastLocation(firstLocation);
 			}
 
 		}

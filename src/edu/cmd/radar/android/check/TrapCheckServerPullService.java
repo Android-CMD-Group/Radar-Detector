@@ -51,6 +51,8 @@ import android.util.Log;
 public class TrapCheckServerPullService extends Service {
 
 	private static final String TRAP_CHECK_URI = "http://domain/servlet/post";
+	public static final String TRAP_INFO_OBTAINED_ACTION = "edu.cmd.radar.android.check.TRAP_INFO_OBTAINED";
+	private static final String NEW_TRAP_LOCATION_INFO_KEY = null;
 	private BroadcastReceiver receiver;
 
 	@Override
@@ -74,7 +76,7 @@ public class TrapCheckServerPullService extends Service {
 		Intent i = new Intent(this, SpeedAndBearingLoactionService.class);
 		startService(i);
 
-		return START_STICKY;
+		return START_REDELIVER_INTENT;
 	}
 
 	protected void locationRecieved(Intent i) {
@@ -88,48 +90,16 @@ public class TrapCheckServerPullService extends Service {
 
 		TrapLocations trapLocations = streamToTrapLocation(jsonStream, currentLocation);
 
-		long timeToSleep = getTimeToSleep(trapLocations, currentLocation);
+		Intent intent = new Intent();
 
-		setAlarm(timeToSleep, trapLocations, currentLocation);
+		intent.putExtras(i);
+		intent.getExtras().putSerializable(NEW_TRAP_LOCATION_INFO_KEY, trapLocations);
 		
+		intent.setAction(TRAP_INFO_OBTAINED_ACTION);
+		sendBroadcast(intent);
+
+		// calls destroy
 		stopSelf();
-	}
-
-	private void setAlarm(long timeToSleep, TrapLocations trapLocations, SerializableLocation currentLocation) {
-		Intent intentForNextFix = new Intent(TrapCheckReceiver.class.getName());
-
-		intentForNextFix.setAction(TrapCheckReceiver.CHECK_DISTANCE_FROM_TRAPS_ACTION);
-
-		Bundle extraBundle = new Bundle();
-		
-		
-		extraBundle.putSerializable(TrapCheckWakeUpService.LOCATION_KEY,
-				currentLocation);
-
-		extraBundle.putLong(TrapCheckWakeUpService.LAST_TIME_KEY, System.currentTimeMillis());
-		intentForNextFix.putExtras(extraBundle);
-		
-		extraBundle.putSerializable(TrapCheckWakeUpService.TRAP_LOCATIONS_INFO_KEY, trapLocations);
-
-		PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0,
-				intentForNextFix, 0);
-
-		// Set the broadcast alarm for a specified time and stop the service
-		AlarmManager alarmManager = (AlarmManager) getSystemService(Service.ALARM_SERVICE);
-		alarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis()
-				+ timeToSleep, pendingIntent);
-	}
-
-	private long getTimeToSleep(TrapLocations trapLocations, SerializableLocation currentLocation) {
-
-		ArrayList<Float> distances = (ArrayList<Float>) trapLocations
-				.getDistanceList();
-		Float dis = Collections.min(distances);
-		ArrayList<SerializableLocation> locList = (ArrayList<SerializableLocation>) trapLocations
-				.getLocationList();
-		SerializableLocation closest = locList.get(distances.indexOf(dis));
-
-		return  (long) ((long) (dis / currentLocation.getSpeed()) * 1000 * TrapCheckWakeUpService.RATIO_OF_DISTANCE_TO_WAIT);
 	}
 
 	private InputStream getTrapLocationsFromServer(String jsonInfo) {
@@ -269,17 +239,14 @@ public class TrapCheckServerPullService extends Service {
 
 				}
 
-				if ("distances".equals(fieldname)) {
-					jParser.nextToken(); // current token is "[", move next
-					// messages is array, loop until token equal to "]"
-					while (jParser.nextToken() != JsonToken.END_ARRAY) {
-						trapLocations.addDistance(jParser.getFloatValue());
-					}
-				}
-
-				if ("range".equals(fieldname)) {
+				if ("distanceRange".equals(fieldname)) {
 					jParser.nextToken();
 					trapLocations.setRangeOfPointsFromOrigin(jParser.getFloatValue());
+				}
+				
+				if ("bearingRange".equals(fieldname)) {
+					jParser.nextToken();
+					trapLocations.setValidBearingRange(jParser.getFloatValue());
 				}
 
 			}

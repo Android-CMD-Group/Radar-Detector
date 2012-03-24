@@ -1,7 +1,9 @@
 package edu.cmd.radar.android.check;
 
 import java.io.Serializable;
-import java.util.List;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Set;
 
 import edu.cmd.radar.android.location.SerializableLocation;
 
@@ -9,12 +11,11 @@ import edu.cmd.radar.android.location.SerializableLocation;
 public class TrapLocations implements Serializable{
 
 	private static final long serialVersionUID = 3714199198111591527L;
-	private List<SerializableLocation> locationList;
-	private List<Float> distanceList;
 	private long timeStamp;
 	private SerializableLocation originalLocation;
 	private float rangeOfPointsFromOrigin;
-	
+	private HashMap<SerializableLocation, Float> locationToDistanceMap;
+	private float validBearingRange;
 	
 
 	public void addLocation(double lat, double lon, float accuracy, float speed){
@@ -23,7 +24,7 @@ public class TrapLocations implements Serializable{
 		loc.setLongitude(lon);
 		loc.setSpeed(speed);
 		loc.setAccuracy(accuracy);
-		locationList.add(loc);
+		locationToDistanceMap.put(loc, null);
 	}
 	
 	public SerializableLocation getOriginalLocation() {
@@ -41,26 +42,38 @@ public class TrapLocations implements Serializable{
 	public void setRangeOfPointsFromOrigin(float rangeOfPointsFromOrigin) {
 		this.rangeOfPointsFromOrigin = rangeOfPointsFromOrigin;
 	}
-	public void setDistanceList(List<Float> distanceList) {
-		this.distanceList = distanceList;
+	
+	public Float addDistance(SerializableLocation loc, float dis) {
+		return locationToDistanceMap.put(loc, dis);
 	}
-	public List<SerializableLocation> getLocationList() {
-		return locationList;
-	}
-	public void setLocationList(List<SerializableLocation> locationList) {
-		this.locationList = locationList;
-	}
-	public List<Float> getDistanceList() {
-		return distanceList;
-	}
-	public void addDistance(float d) {
-		distanceList.add(d);
-	}
+	
 	public long getTimeStamp() {
 		return timeStamp;
 	}
+	
 	public void setTimeStamp(long timeStamp) {
 		this.timeStamp = timeStamp;
+	}
+
+	public Set<SerializableLocation> getLocations() {
+		return locationToDistanceMap.keySet();
+	}
+
+	public Collection<Float> getDistanceCollection() {
+		return locationToDistanceMap.values();
+	}
+
+	public float getValidBearingRange() {
+		return validBearingRange;
+	}
+
+	public void setValidBearingRange(float validBearingRange) {
+		this.validBearingRange = validBearingRange;
+	}
+
+	public void removeLocation(SerializableLocation loc) {
+		locationToDistanceMap.remove(loc);
+		
 	}
 	
 	
