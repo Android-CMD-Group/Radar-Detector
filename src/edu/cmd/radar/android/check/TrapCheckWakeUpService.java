@@ -11,6 +11,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.hardware.Camera.PreviewCallback;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -21,7 +22,6 @@ import edu.cmd.radar.android.location.SpeedAndBearingLoactionService;
 public class TrapCheckWakeUpService extends Service {
 
 	public static final String LAST_LOCATION_KEY = "LOCATION_KEY";
-	public static final String LAST_TIME_KEY = "LAST_TIME_KEY";
 	public static final float RATIO_OF_DISTANCE_TO_WAIT = 0.666f;
 	protected BroadcastReceiver simpleLocationReceiver;
 	protected BroadcastReceiver serverInfoReceiver;
@@ -96,7 +96,7 @@ public class TrapCheckWakeUpService extends Service {
 
 	protected void locationRecieved(Intent i,
 			SerializableLocation currentLocation) {
-
+		
 		removePastTraps(currentLocation);
 
 		setUpdatedDistances(currentLocation);
@@ -106,7 +106,7 @@ public class TrapCheckWakeUpService extends Service {
 			return;
 		}
 
-		setAlertsForTargetsInRange(currentLocation);
+		setAlertForClosestTarget(currentLocation);
 
 		long timeToSleep = getTimeToSleep(currentLocation);
 
@@ -133,9 +133,38 @@ public class TrapCheckWakeUpService extends Service {
 
 	}
 
-	private void setAlertsForTargetsInRange(SerializableLocation currentLocation) {
-		// TODO Auto-generated method stub
+	private void setAlertForClosestTarget(SerializableLocation currentLocation) {
+		
+		SerializableLocation closestLoc = trapLocations.getLocations().iterator().next();
+		float minDistance = trapLocations.getDistanceFromLocation(closestLoc);
+		for (SerializableLocation loc : trapLocations.getLocations()) {
+			if (minDistance > trapLocations.getDistanceFromLocation(loc)){
+				closestLoc = loc;
+			}
+			
+		}
 
+		trapLocations.removeLocation(closestLoc);
+		
+		Intent intentForAlert = new Intent(/*Alert Activity*/);
+
+		intentForAlert
+				.setAction(/*Alert Activity Action*/);
+
+		Bundle extraBundle = new Bundle();
+
+		extraBundle.putSerializable(/*Alert Activity location key*/,
+				closestLoc);
+
+		PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0,
+				intentForAlert, 0);
+
+		// Set the broadcast alarm for a specified time and stop the service
+		AlarmManager alarmManager = (AlarmManager) getSystemService(Service.ALARM_SERVICE);
+		alarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis()
+				+ /*Time until wake*/, pendingIntent);
+		
+		
 	}
 
 	private boolean infoOutOfDate(SerializableLocation currentLocation) {
@@ -260,10 +289,6 @@ public class TrapCheckWakeUpService extends Service {
 
 		extraBundle.putSerializable(TRAP_LOCATIONS_INFO_KEY, trapLocations);
 
-		extraBundle.putLong(TrapCheckWakeUpService.LAST_TIME_KEY,
-				System.currentTimeMillis());
-		intentForNextFix.putExtras(extraBundle);
-
 		PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0,
 				intentForNextFix, 0);
 
@@ -277,12 +302,24 @@ public class TrapCheckWakeUpService extends Service {
 		Collection<Float> distances = (ArrayList<Float>) trapLocations
 				.getDistanceCollection();
 		Float dis = Collections.min(distances);
-		return (long) ((long) (dis / getSpeed()) * 1000 * RATIO_OF_DISTANCE_TO_WAIT);
+		return (long) ((long) (dis / getCurrentSpeed(currentLocation)) * 1000 * RATIO_OF_DISTANCE_TO_WAIT);
 	}
 
-	private Float getSpeed() {
-		// TODO Auto-generated method stub
-		return null;
+	private Float getCurrentSpeed(SerializableLocation currentLocation) {
+
+		if (currentLocation.getSpeed() != 0.0f){
+			return currentLocation.getSpeed();
+		}
+		
+		float[] result1 = new float[1];
+
+		Location.distanceBetween(currentLocation.getLatitude(),
+				currentLocation.getLongitude(), lastKnownLocation.getLatitude(),
+				lastKnownLocation.getLongitude(), result1);
+		float distanceFromLastKnown = result1[0];
+		
+		return distanceFromLastKnown/(currentLocation.getTime()-lastKnownLocation.getTime())/1000;
+		
 	}
 
 	private void setUpdatedDistances(SerializableLocation currentLocation) {
