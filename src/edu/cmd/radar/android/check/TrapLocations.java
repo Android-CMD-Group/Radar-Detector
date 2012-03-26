@@ -76,6 +76,10 @@ public class TrapLocations implements Serializable{
 		
 	}
 	
+	public float getDistanceFromLocation(SerializableLocation loc) {
+		return locationToDistanceMap.get(loc);
+	}
+	
 	
 	
 }
