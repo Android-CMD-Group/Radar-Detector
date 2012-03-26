@@ -38,7 +38,8 @@ public class SerializableLocation implements Serializable {
 		longitude = originalLocationObject.getLongitude();
 		provider = originalLocationObject.getProvider();
 		speed = originalLocationObject.getSpeed();
-		time = originalLocationObject.getTime();
+		// offset by one day due bug
+		time = originalLocationObject.getTime()-86400000;
 		hasAccuracy = originalLocationObject.hasAccuracy();
 		hasBearing = originalLocationObject.hasBearing();
 		hasSpeed = originalLocationObject.hasSpeed();
