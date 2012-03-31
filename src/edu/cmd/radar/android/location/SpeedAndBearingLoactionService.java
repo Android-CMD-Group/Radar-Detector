@@ -140,14 +140,15 @@ public class SpeedAndBearingLoactionService extends Service {
 				if (location.getSpeed() != 0.0) {
 					numOfSpeeds++;
 					speedTotal += location.getSpeed();
+					Log.d(MainSettingsActivity.LOG_TAG_LOCATION,
+							"fix has speed: " + location.getSpeed());
+
+					// set the speed to the average speed. If this is being
+					// inaccurate, change to median
+					firstLocation.setSpeed((float) (speedTotal / numOfSpeeds));
 				}
 
-				Log.d(MainSettingsActivity.LOG_TAG_LOCATION,
-						"fix has speed: " + location.getSpeed());
-
-				// set the speed to the average speed. If this is being
-				// inaccurate, change to median
-				firstLocation.setSpeed((float) (speedTotal / numOfSpeeds));
+				
 			}
 
 			// If the info has a bearing, put it in first location info
