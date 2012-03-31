@@ -6,6 +6,8 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import edu.cmd.radar.android.R;
+import edu.cmd.radar.android.check.TrapCheckServerPullService;
+import edu.cmd.radar.android.check.TrapCheckWakeUpService;
 import edu.cmd.radar.android.shake.ShakeListenerService;
 
 public class MainSettingsActivity extends Activity {
@@ -17,7 +19,9 @@ public class MainSettingsActivity extends Activity {
 	 */
 	public static final String LOG_TAG_CHECK_FOR_DRIVING = "Radar-Detector.checkForDriving";
 	public static final String LOG_TAG_TRAP_REPORT = "Radar-Detector.trapReport";
-	public static final String LOG_TAG_SHAKE_LISTENER = "ShakeListenerService";
+	public static final String LOG_TAG_SHAKE_LISTENER = "Radar-Detector.shakeListener";
+	public static final String LOG_TAG_TRAP_CHECKER = "Radar-Detector.trapChecker";
+	public static final String LOG_TAG_LOCATION = "Radar-Detector.location";
 
 
 	/** Called when the activity is first created. */
@@ -26,6 +30,8 @@ public class MainSettingsActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
 		Log.d(MainSettingsActivity.LOG_TAG, "MainSettingsActivity created");
+		Intent i = new Intent(this, TrapCheckWakeUpService.class);
+		startService(i);
 	}
 	
 	// Starts the ShakeListenerService

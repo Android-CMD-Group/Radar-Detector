@@ -50,7 +50,7 @@ import android.util.Log;
 
 public class TrapCheckServerPullService extends Service {
 
-	private static final String TRAP_CHECK_URI = "http://domain/servlet/post";
+	private static final String TRAP_CHECK_URI = "http://192.168.1.3:1188/Radar-Server/check";
 	public static final String TRAP_INFO_OBTAINED_ACTION = "edu.cmd.radar.android.check.TRAP_INFO_OBTAINED";
 	private static final String NEW_TRAP_LOCATION_INFO_KEY = null;
 	private BroadcastReceiver receiver;
@@ -66,7 +66,7 @@ public class TrapCheckServerPullService extends Service {
 			public void onReceive(Context context, Intent i) {
 				
 				unregisterReceiver(receiver);
-
+				Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Location received by broadcast from SpeedAndBearingLoactionService");
 				locationRecieved(i);
 
 			}
@@ -74,6 +74,7 @@ public class TrapCheckServerPullService extends Service {
 		};
 		registerReceiver(receiver, filter);
 		Intent i = new Intent(this, SpeedAndBearingLoactionService.class);
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Starting service to get hard fix");
 		startService(i);
 
 		return START_REDELIVER_INTENT;
@@ -83,11 +84,15 @@ public class TrapCheckServerPullService extends Service {
 		
 		SerializableLocation currentLocation = (SerializableLocation) i.getExtras().getSerializable(
 				SpeedAndBearingLoactionService.LOCATION_KEY);
-
+		
 		String toSend = writeInfoToJsonString(currentLocation);
+		
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "sending "+ toSend + " to server");
 		
 		InputStream jsonStream = getTrapLocationsFromServer(toSend);
 
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "got info from server");
+		
 		TrapLocations trapLocations = streamToTrapLocation(jsonStream, currentLocation);
 
 		Intent intent = new Intent();
@@ -103,8 +108,6 @@ public class TrapCheckServerPullService extends Service {
 	}
 
 	private InputStream getTrapLocationsFromServer(String jsonInfo) {
-
-
 
 		InputStream stream = null;
 		String result = "";
@@ -182,6 +185,7 @@ public class TrapCheckServerPullService extends Service {
 			}
 
 			if (loc.hasSpeed()) {
+				Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "speed: " + loc.getSpeed());
 				jsonWriter.name("speed").value(loc.getSpeed());
 			} else {
 				jsonWriter.name("speed").nullValue();

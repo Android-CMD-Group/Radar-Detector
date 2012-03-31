@@ -15,9 +15,11 @@ import android.hardware.Camera.PreviewCallback;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.util.Log;
 import edu.cmd.radar.android.location.SerializableLocation;
 import edu.cmd.radar.android.location.SimpleLocationService;
 import edu.cmd.radar.android.location.SpeedAndBearingLoactionService;
+import edu.cmd.radar.android.ui.MainSettingsActivity;
 
 public class TrapCheckWakeUpService extends Service {
 
@@ -34,13 +36,17 @@ public class TrapCheckWakeUpService extends Service {
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "TrapCheckWakeUpService onCommand called");
+		Bundle extras = (Bundle) intent.getExtras();
 
-		trapLocations = (TrapLocations) intent.getExtras().getSerializable(
-				TRAP_LOCATIONS_INFO_KEY);
-
-		if (trapLocations == null) {
+		if (extras == null) {
+			Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "No trapLocation info yet");
 			startServiceToGetTrapInfo();
 		} else {
+			Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Traplocation info exists");
+			trapLocations = (TrapLocations) intent.getExtras().getSerializable(
+					TRAP_LOCATIONS_INFO_KEY);
+			
 			lastKnownLocation = (SerializableLocation) intent.getExtras()
 					.getSerializable(LAST_LOCATION_KEY);
 			IntentFilter filter = new IntentFilter();
@@ -50,7 +56,7 @@ public class TrapCheckWakeUpService extends Service {
 				@Override
 				public void onReceive(Context context, Intent i) {
 					unregisterReceiver(simpleLocationReceiver);
-
+					Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Received location from simplelocation broadcast");
 					SerializableLocation currentLocation = (SerializableLocation) i
 							.getExtras().getSerializable(
 									SimpleLocationService.LOCATION_KEY);
@@ -61,14 +67,16 @@ public class TrapCheckWakeUpService extends Service {
 
 			};
 			registerReceiver(simpleLocationReceiver, filter);
-
+			Intent i = new Intent(this, SimpleLocationService.class);
+			Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Starting SimpleLocationSevice to get a simple fix");
+			startService(i);
 		}
 
 		return START_REDELIVER_INTENT;
 	}
 
 	private void startServiceToGetTrapInfo() {
-
+		
 		IntentFilter filter = new IntentFilter();
 		filter.addAction(TrapCheckServerPullService.TRAP_INFO_OBTAINED_ACTION);
 
@@ -76,7 +84,7 @@ public class TrapCheckWakeUpService extends Service {
 			@Override
 			public void onReceive(Context context, Intent i) {
 				unregisterReceiver(serverInfoReceiver);
-
+				Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Got info from TrapCheckServerPullService broadcast");
 				trapLocations = (TrapLocations) i.getExtras().getSerializable(
 						TRAP_LOCATIONS_INFO_KEY);
 
@@ -91,6 +99,7 @@ public class TrapCheckWakeUpService extends Service {
 		};
 		registerReceiver(serverInfoReceiver, filter);
 		Intent i = new Intent(this, TrapCheckServerPullService.class);
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Starting TrapCheckServerPullService to get a hard fix and trap info");
 		startService(i);
 	}
 
@@ -102,14 +111,16 @@ public class TrapCheckWakeUpService extends Service {
 		setUpdatedDistances(currentLocation);
 
 		if (infoOutOfDate(currentLocation)) {
+			Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Info is out of date, get the info from the server");
 			startServiceToGetTrapInfo();
 			return;
 		}
-
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Info is still valid");
+		
 		setAlertForClosestTarget(currentLocation);
 
 		long timeToSleep = getTimeToSleep(currentLocation);
-
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Setting alarms for "+ timeToSleep/1000 + " seconds");
 		setAlarm(timeToSleep, currentLocation);
 
 		stopSelf();
@@ -117,7 +128,7 @@ public class TrapCheckWakeUpService extends Service {
 	}
 
 	private void removePastTraps(SerializableLocation currentLocation) {
-
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Removing traps that are out of range");
 		float currentBearing = getCurrentBearing(currentLocation);
 
 		float upperBearingBound = (float) ((currentBearing + .5 * PAST_POINT_VALID_BEARING_RANGE) % 360);
@@ -134,41 +145,43 @@ public class TrapCheckWakeUpService extends Service {
 	}
 
 	private void setAlertForClosestTarget(SerializableLocation currentLocation) {
-		
-		SerializableLocation closestLoc = trapLocations.getLocations().iterator().next();
-		float minDistance = trapLocations.getDistanceFromLocation(closestLoc);
-		for (SerializableLocation loc : trapLocations.getLocations()) {
-			if (minDistance > trapLocations.getDistanceFromLocation(loc)){
-				closestLoc = loc;
-			}
-			
-		}
-
-		trapLocations.removeLocation(closestLoc);
-		
-		Intent intentForAlert = new Intent(/*Alert Activity*/);
-
-		intentForAlert
-				.setAction(/*Alert Activity Action*/);
-
-		Bundle extraBundle = new Bundle();
-
-		extraBundle.putSerializable(/*Alert Activity location key*/,
-				closestLoc);
-
-		PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0,
-				intentForAlert, 0);
-
-		// Set the broadcast alarm for a specified time and stop the service
-		AlarmManager alarmManager = (AlarmManager) getSystemService(Service.ALARM_SERVICE);
-		alarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis()
-				+ /*Time until wake*/, pendingIntent);
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Setting alarm for closest target");
+//		SerializableLocation closestLoc = trapLocations.getLocations().iterator().next();
+//		float minDistance = trapLocations.getDistanceFromLocation(closestLoc);
+//		for (SerializableLocation loc : trapLocations.getLocations()) {
+//			if (minDistance > trapLocations.getDistanceFromLocation(loc)){
+//				closestLoc = loc;
+//			}
+//			
+//		}
+//
+//		trapLocations.removeLocation(closestLoc);
+//		
+//		Intent intentForAlert = new Intent(/*Alert Activity*/);
+//
+//		intentForAlert
+//				.setAction(/*Alert Activity Action*/);
+//
+//		Bundle extraBundle = new Bundle();
+//
+//		extraBundle.putSerializable(/*Alert Activity location key*/,
+//				closestLoc);
+//
+//		PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0,
+//				intentForAlert, 0);
+//
+//		// Set the broadcast alarm for a specified time and stop the service
+//		AlarmManager alarmManager = (AlarmManager) getSystemService(Service.ALARM_SERVICE);
+//		alarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis()
+//				+ /*Time until wake*/, pendingIntent);
 		
 		
 	}
 
 	private boolean infoOutOfDate(SerializableLocation currentLocation) {
-
+		
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Checking to see if info is out of date");
+		
 		SerializableLocation origin = trapLocations.getOriginalLocation();
 		float[] results1 = new float[1];
 		Location.distanceBetween(currentLocation.getLatitude(),
@@ -181,6 +194,8 @@ public class TrapCheckWakeUpService extends Service {
 		if (trapLocations.getRangeOfPointsFromOrigin() > distanceFromOrigin) {
 			return true;
 		}
+		
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Range is still valid");
 		// distance from most distant point
 
 		float distanceToFurthestTrap = Collections.max(trapLocations
@@ -190,7 +205,7 @@ public class TrapCheckWakeUpService extends Service {
 			return true;
 
 		}
-
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Still far enough from furthest trap");
 		// bearing check
 
 		float upperBearingBound = (float) ((origin.getBearing() + .5 * trapLocations
@@ -202,7 +217,7 @@ public class TrapCheckWakeUpService extends Service {
 		if (!(currentBearing > lowerBearingBound && currentBearing < upperBearingBound)) {
 			return true;
 		}
-
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "still within valid bearing range");
 		return false;
 	}
 
@@ -323,7 +338,7 @@ public class TrapCheckWakeUpService extends Service {
 	}
 
 	private void setUpdatedDistances(SerializableLocation currentLocation) {
-
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Recalculating distances to points");
 		for (SerializableLocation loc : trapLocations.getLocations()) {
 			float[] result = new float[1];
 			Location.distanceBetween(loc.getLongitude(), loc.getLatitude(),
