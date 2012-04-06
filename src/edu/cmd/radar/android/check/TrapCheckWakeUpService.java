@@ -3,6 +3,8 @@ package edu.cmd.radar.android.check;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
+import java.util.Set;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
@@ -11,7 +13,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.hardware.Camera.PreviewCallback;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -86,12 +87,13 @@ public class TrapCheckWakeUpService extends Service {
 				unregisterReceiver(serverInfoReceiver);
 				Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Got info from TrapCheckServerPullService broadcast");
 				trapLocations = (TrapLocations) i.getExtras().getSerializable(
-						TRAP_LOCATIONS_INFO_KEY);
-
+						TrapCheckServerPullService.NEW_TRAP_LOCATION_INFO_KEY);
+				
 				SerializableLocation currentLocation = (SerializableLocation) i
 						.getExtras().getSerializable(
 								SpeedAndBearingLoactionService.LOCATION_KEY);
-
+				
+				lastKnownLocation = currentLocation;
 				locationRecieved(i, currentLocation);
 
 			}
@@ -106,7 +108,7 @@ public class TrapCheckWakeUpService extends Service {
 	protected void locationRecieved(Intent i,
 			SerializableLocation currentLocation) {
 		
-		removePastTraps(currentLocation);
+		//removePastTraps(currentLocation);
 
 		setUpdatedDistances(currentLocation);
 
@@ -134,11 +136,16 @@ public class TrapCheckWakeUpService extends Service {
 		float upperBearingBound = (float) ((currentBearing + .5 * PAST_POINT_VALID_BEARING_RANGE) % 360);
 		float lowerBearingBound = (float) ((currentBearing - .5 * PAST_POINT_VALID_BEARING_RANGE) % 360);
 
-		for (SerializableLocation loc : trapLocations.getLocations()) {
+		Iterator<SerializableLocation> itor = trapLocations.getLocations().iterator();
+
+		
+		
+		while (itor.hasNext()) {
+			SerializableLocation loc = itor.next();
 			float bearingBetweenCurrentAndTrap = getBearingBetweenTwoLocations(
 					loc, currentLocation);
 			if (!(bearingBetweenCurrentAndTrap < upperBearingBound && bearingBetweenCurrentAndTrap > lowerBearingBound)) {
-				trapLocations.removeLocation(loc);
+				itor.remove();
 			}
 		}
 
@@ -189,15 +196,20 @@ public class TrapCheckWakeUpService extends Service {
 				origin.getLongitude(), results1);
 		float distanceFromOrigin = results1[0];
 
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "current location:"+currentLocation.getLatitude()+", "+currentLocation.getLongitude());
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "origin location:"+origin.getLatitude()+", "+origin.getLongitude());
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "distance:"+distanceFromOrigin);
 		// valid range check
 
-		if (trapLocations.getRangeOfPointsFromOrigin() > distanceFromOrigin) {
+		if (trapLocations.getRangeOfPointsFromOrigin() < distanceFromOrigin) {
 			return true;
 		}
 		
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Range is still valid");
 		// distance from most distant point
-
+		
+		
+		
 		float distanceToFurthestTrap = Collections.max(trapLocations
 				.getDistanceCollection());
 
@@ -213,7 +225,7 @@ public class TrapCheckWakeUpService extends Service {
 		float lowerBearingBound = (float) ((origin.getBearing() - .5 * trapLocations
 				.getValidBearingRange()) % 360);
 		float currentBearing = getCurrentBearing(currentLocation);
-
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "currentBearing: "+currentBearing);
 		if (!(currentBearing > lowerBearingBound && currentBearing < upperBearingBound)) {
 			return true;
 		}
@@ -314,7 +326,7 @@ public class TrapCheckWakeUpService extends Service {
 	}
 
 	private long getTimeToSleep(SerializableLocation currentLocation) {
-		Collection<Float> distances = (ArrayList<Float>) trapLocations
+		Collection<Float> distances = trapLocations
 				.getDistanceCollection();
 		Float dis = Collections.min(distances);
 		return (long) ((long) (dis / getCurrentSpeed(currentLocation)) * 1000 * RATIO_OF_DISTANCE_TO_WAIT);
@@ -346,6 +358,7 @@ public class TrapCheckWakeUpService extends Service {
 					currentLocation.getLongitude(), result);
 			trapLocations.addDistance(loc, result[0]);
 		}
+
 	}
 
 	@Override
