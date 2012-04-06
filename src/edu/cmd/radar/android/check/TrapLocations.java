@@ -18,12 +18,17 @@ public class TrapLocations implements Serializable{
 	private float validBearingRange;
 	
 
+	public TrapLocations() {
+		locationToDistanceMap = new HashMap<SerializableLocation, Float>();
+	}
+	
 	public void addLocation(double lat, double lon, float accuracy, float speed){
 		SerializableLocation loc = new SerializableLocation();
 		loc.setLatitude(lat);
 		loc.setLongitude(lon);
 		loc.setSpeed(speed);
 		loc.setAccuracy(accuracy);
+		
 		locationToDistanceMap.put(loc, null);
 	}
 	
