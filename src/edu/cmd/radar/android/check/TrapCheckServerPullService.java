@@ -1,58 +1,42 @@
 package edu.cmd.radar.android.check;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.Serializable;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.Collections;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.ResponseHandler;
-import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
 
-import com.google.gson.stream.JsonWriter;
-
-import edu.cmd.radar.android.drive.WifiChangeReceiver;
-import edu.cmd.radar.android.location.SerializableLocation;
-import edu.cmd.radar.android.location.SpeedAndBearingLoactionService;
-import edu.cmd.radar.android.shake.ShakeListenerService;
-import edu.cmd.radar.android.ui.MainSettingsActivity;
-
-import android.app.AlarmManager;
-import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.location.Location;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.Settings.Secure;
 import android.util.Log;
 
+import com.google.gson.stream.JsonWriter;
+
+import edu.cmd.radar.android.location.SerializableLocation;
+import edu.cmd.radar.android.location.SpeedAndBearingLoactionService;
+import edu.cmd.radar.android.ui.MainSettingsActivity;
+
 public class TrapCheckServerPullService extends Service {
 
-	private static final String TRAP_CHECK_URI = "http://192.168.1.3:1188/Radar-Server/check";
+	private static final String TRAP_CHECK_URI = "http://192.168.1.3:1188/Radar_Server/check";
 	public static final String TRAP_INFO_OBTAINED_ACTION = "edu.cmd.radar.android.check.TRAP_INFO_OBTAINED";
-	private static final String NEW_TRAP_LOCATION_INFO_KEY = null;
+	public static final String NEW_TRAP_LOCATION_INFO_KEY = "NEW_TRAP_LOCATION_INFO_KEY";
 	private BroadcastReceiver receiver;
 
 	@Override
@@ -65,7 +49,12 @@ public class TrapCheckServerPullService extends Service {
 			@Override
 			public void onReceive(Context context, Intent i) {
 				
-				unregisterReceiver(receiver);
+				try {
+					unregisterReceiver(receiver);
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 				Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Location received by broadcast from SpeedAndBearingLoactionService");
 				locationRecieved(i);
 
@@ -95,11 +84,12 @@ public class TrapCheckServerPullService extends Service {
 		
 		TrapLocations trapLocations = streamToTrapLocation(jsonStream, currentLocation);
 
+		Bundle oldExtras = i.getExtras();
+		oldExtras.putSerializable(NEW_TRAP_LOCATION_INFO_KEY, trapLocations);
 		Intent intent = new Intent();
-
-		intent.putExtras(i);
-		intent.getExtras().putSerializable(NEW_TRAP_LOCATION_INFO_KEY, trapLocations);
 		
+		intent.putExtras(oldExtras);
+
 		intent.setAction(TRAP_INFO_OBTAINED_ACTION);
 		sendBroadcast(intent);
 
@@ -185,7 +175,6 @@ public class TrapCheckServerPullService extends Service {
 			}
 
 			if (loc.hasSpeed()) {
-				Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "speed: " + loc.getSpeed());
 				jsonWriter.name("speed").value(loc.getSpeed());
 			} else {
 				jsonWriter.name("speed").nullValue();
