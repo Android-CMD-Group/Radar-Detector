@@ -128,7 +128,7 @@ public class TrapCheckWakeUpService extends Service {
 	protected void locationRecieved(Intent i,
 			SerializableLocation currentLocation) {
 
-		// removePastTraps(currentLocation);
+		removePastTraps(currentLocation);
 
 		setUpdatedDistances(currentLocation);
 
@@ -146,8 +146,6 @@ public class TrapCheckWakeUpService extends Service {
 		setAlertForClosestTarget(currentLocation);
 
 		long timeToSleep = getTimeToSleep(currentLocation);
-		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Setting alarms for "
-				+ timeToSleep / 1000 + " seconds");
 		setAlarm(timeToSleep, currentLocation);
 
 		stopSelf();
@@ -176,16 +174,96 @@ public class TrapCheckWakeUpService extends Service {
 					loc, currentLocation);
 			Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 					"Bearing to location is : " + bearingBetweenCurrentAndTrap
-							+ " degrees east of north\n" + "Trap: \n"
+							+ " degrees east of north\n" + "for trap: \n"
 							+ loc.toString());
 			if (!(bearingBetweenCurrentAndTrap < upperBearingBound && bearingBetweenCurrentAndTrap > lowerBearingBound)) {
 				itor.remove();
-				Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Trap Removed");
+				Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
+						"^^^Trap Removed");
 			}
 		}
 
 	}
 
+	private void setUpdatedDistances(SerializableLocation currentLocation) {
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
+				"Recalculating distances to points");
+		for (SerializableLocation loc : trapLocations.getLocations()) {
+			float[] result = new float[1];
+			Location.distanceBetween(loc.getLatitude(), loc.getLongitude(),
+					currentLocation.getLatitude(),
+					currentLocation.getLongitude(), result);
+			trapLocations.addDistance(loc, result[0]);
+		}
+
+	}
+	
+	private boolean infoOutOfDate(SerializableLocation currentLocation) {
+
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
+				"Checking to see if info is out of date");
+
+		SerializableLocation origin = trapLocations.getOriginalLocation();
+		float[] results1 = new float[1];
+		Location.distanceBetween(currentLocation.getLatitude(),
+				currentLocation.getLongitude(), origin.getLatitude(),
+				origin.getLongitude(), results1);
+		float distanceFromOrigin = results1[0];
+
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
+				"current location:" + currentLocation.getLatitude() + ", "
+						+ currentLocation.getLongitude());
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "origin location:"
+				+ origin.getLatitude() + ", " + origin.getLongitude());
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "distance:"
+				+ distanceFromOrigin);
+		// valid range check
+
+		if (trapLocations.getRangeOfPointsFromOrigin() < distanceFromOrigin) {
+			Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
+					"Range from origin is invalid\n Current distance from origin: "
+							+ distanceFromOrigin + " meters\nValid range: "
+							+ trapLocations.getRangeOfPointsFromOrigin()
+							+ " meters\n");
+			return true;
+		}
+
+		// distance from most distant point
+
+		float distanceToFurthestTrap = Collections.max(trapLocations
+				.getDistanceCollection());
+
+		if (distanceToFurthestTrap < DISTANCE_TO_FURTHEST_TRAP_UPDATE_THRESHOLD) {
+			Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
+					"Too close to furthest trap\n Current distance furthest Trap: "
+							+ distanceToFurthestTrap + " meters\nValid range: "
+							+ DISTANCE_TO_FURTHEST_TRAP_UPDATE_THRESHOLD
+							+ " meters\n");
+			
+			return true;
+
+		}
+		// bearing check
+
+		float upperBearingBound = (float) ((origin.getBearing() + .5 * trapLocations
+				.getValidBearingRange()) % 360);
+		float lowerBearingBound = (float) ((origin.getBearing() - .5 * trapLocations
+				.getValidBearingRange()) % 360);
+		float currentBearing = getCurrentBearing(currentLocation);
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "currentBearing: "
+				+ currentBearing);
+		if (!(currentBearing > lowerBearingBound && currentBearing < upperBearingBound)) {
+			Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
+					"Heading in invalid bearing\n Current Bearing: "
+							+ currentBearing + "degrees\nValid range: "
+							+ lowerBearingBound +" to " + upperBearingBound
+							+ " degrees\n");
+			
+			return true;
+		}
+		return false;
+	}
+	
 	private void setAlertForClosestTarget(SerializableLocation currentLocation) {
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 				"Setting alarm for closest target");
@@ -223,67 +301,19 @@ public class TrapCheckWakeUpService extends Service {
 
 	}
 
-	private boolean infoOutOfDate(SerializableLocation currentLocation) {
-
-		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
-				"Checking to see if info is out of date");
-
-		SerializableLocation origin = trapLocations.getOriginalLocation();
-		float[] results1 = new float[1];
-		Location.distanceBetween(currentLocation.getLatitude(),
-				currentLocation.getLongitude(), origin.getLatitude(),
-				origin.getLongitude(), results1);
-		float distanceFromOrigin = results1[0];
-
-		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
-				"current location:" + currentLocation.getLatitude() + ", "
-						+ currentLocation.getLongitude());
-		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "origin location:"
-				+ origin.getLatitude() + ", " + origin.getLongitude());
-		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "distance:"
-				+ distanceFromOrigin);
-		// valid range check
-
-		if (trapLocations.getRangeOfPointsFromOrigin() < distanceFromOrigin) {
-			return true;
-		}
-
-		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Range is still valid");
-		// distance from most distant point
-
-		float distanceToFurthestTrap = Collections.max(trapLocations
-				.getDistanceCollection());
-
-		if (distanceToFurthestTrap < DISTANCE_TO_FURTHEST_TRAP_UPDATE_THRESHOLD) {
-			return true;
-
-		}
-		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
-				"Still far enough from furthest trap");
-		// bearing check
-
-		float upperBearingBound = (float) ((origin.getBearing() + .5 * trapLocations
-				.getValidBearingRange()) % 360);
-		float lowerBearingBound = (float) ((origin.getBearing() - .5 * trapLocations
-				.getValidBearingRange()) % 360);
-		float currentBearing = getCurrentBearing(currentLocation);
-		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "currentBearing: "
-				+ currentBearing);
-		if (!(currentBearing > lowerBearingBound && currentBearing < upperBearingBound)) {
-			return true;
-		}
-		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
-				"still within valid bearing range");
-		return false;
-	}
-
 	private float getCurrentBearing(SerializableLocation currentLocation) {
 
 		if (currentLocation.hasBearing()) {
 			return currentLocation.getBearing();
 		}
 
-		return getBearingBetweenTwoLocations(currentLocation, lastKnownLocation);
+		float bearing = getBearingBetweenTwoLocations(currentLocation, lastKnownLocation);
+		
+		if (bearing == Float.NaN){
+			return -1f;
+		}else{
+			return bearing;
+		}
 
 	}
 
@@ -372,7 +402,13 @@ public class TrapCheckWakeUpService extends Service {
 	private long getTimeToSleep(SerializableLocation currentLocation) {
 		Collection<Float> distances = trapLocations.getDistanceCollection();
 		Float dis = Collections.min(distances);
-		return (long) ((long) (dis / getCurrentSpeed(currentLocation)) * 1000 * RATIO_OF_DISTANCE_TO_WAIT);
+		Float speed = getCurrentSpeed(currentLocation);
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
+				"Closest Trap is "+dis+" meters away\n " +
+						"Current speed is : "
+						+ speed + " meters/second\n" +
+						"Sleep for : "+ (long) ((long) (dis / speed) * RATIO_OF_DISTANCE_TO_WAIT)+ " seconds");
+		return (long) ((long) (dis / speed) * 1000 * RATIO_OF_DISTANCE_TO_WAIT);
 	}
 
 	private Float getCurrentSpeed(SerializableLocation currentLocation) {
@@ -389,22 +425,17 @@ public class TrapCheckWakeUpService extends Service {
 				lastKnownLocation.getLongitude(), result1);
 		float distanceFromLastKnown = result1[0];
 
-		return distanceFromLastKnown
+		Float speed = distanceFromLastKnown
 				/ (currentLocation.getTime() - lastKnownLocation.getTime())
 				/ 1000;
-
-	}
-
-	private void setUpdatedDistances(SerializableLocation currentLocation) {
-		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
-				"Recalculating distances to points");
-		for (SerializableLocation loc : trapLocations.getLocations()) {
-			float[] result = new float[1];
-			Location.distanceBetween(loc.getLatitude(), loc.getLongitude(),
-					currentLocation.getLatitude(),
-					currentLocation.getLongitude(), result);
-			trapLocations.addDistance(loc, result[0]);
+		
+		if (speed == Float.NaN){
+			return -1f;
+		}else{
+			return speed;
 		}
+		
+		
 
 	}
 
