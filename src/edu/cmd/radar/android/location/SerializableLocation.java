@@ -27,14 +27,15 @@ public class SerializableLocation implements Serializable {
 	private boolean hasSpeed;
 
 	public String toString() {
-		String returnString = "";
+		String returnString = "-------------------------------------------------------------------------------\n";
 		returnString += "Lat, Long:              " + latitude + ",    " + longitude + "\n";
 		returnString += "Has Speed, Speed:       " + hasSpeed  +",    " + speed + " meters/second\n";
 		returnString += "Has Accuracy, Accuracy: " + hasAccuracy + ", " + accuracy + " meters\n";
 		returnString += "Has Bearing, Bearing:   " + hasBearing  +",  " + bearing + " degrees east from north\n";
 		Date d = new Date(time);
 		returnString += "Created at time: " + d.toString() + "\n";
-		returnString += "Provided by:            " + provider;
+		returnString += "Provided by:            " + provider + "\n";
+		returnString += "-------------------------------------------------------------------------------\n";
 		
 		
 		return returnString;

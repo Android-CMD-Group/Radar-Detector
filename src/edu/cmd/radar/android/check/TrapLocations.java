@@ -24,12 +24,13 @@ public class TrapLocations implements Serializable{
 		locationToDistanceMap = new HashMap<SerializableLocation, Float>();
 	}
 	
-	public void addLocation(double lat, double lon, float accuracy, float speed){
+	public void addLocation(double lat, double lon, float accuracy, float speed, String provider){
 		SerializableLocation loc = new SerializableLocation();
 		loc.setLatitude(lat);
 		loc.setLongitude(lon);
 		loc.setSpeed(speed);
 		loc.setAccuracy(accuracy);
+		loc.setProvider(provider);
 		
 		locationToDistanceMap.put(loc, null);
 	}
@@ -88,20 +89,22 @@ public class TrapLocations implements Serializable{
 	}
 	
 	public String toString() {
-		String returnString = "";
-		returnString += "Origin of info: "+ originalLocation.toString() + "\n";
 		Date d = new Date(timeStamp);
-		returnString += "\n\nCreated at time: " + d.toString() + "\n";
-		returnString += "Valid for: "+ rangeOfPointsFromOrigin + " meters\n";
-		returnString += "Valid for: "+ validBearingRange + " degrees from origin bearing on either side\n";
+		String returnString = "";
+		returnString += "*******************************************************************************\n";
+		returnString += "\n\n*Created at time: " + d.toString() + "\n";
+		returnString += "*Valid for: "+ rangeOfPointsFromOrigin + " meters\n";
+		returnString += "*Valid for: "+ validBearingRange + " degrees from origin bearing on either side\n";
+		returnString += "*\t\tOrigin of info: \n*"+ originalLocation.toString() + "\n";
+		
+		returnString += "*\t\tNow Listing Traps\n";
 		
 		Iterator<SerializableLocation> it = locationToDistanceMap.keySet().iterator();
 		while (it.hasNext()){
 			SerializableLocation loc = it.next();
-			returnString += "Speed Trap is at :\n" + loc.toString() + "\n";
-			returnString += "And is "+locationToDistanceMap.get(loc) + " meters from last compared location\n";
+			returnString += "\tSpeed Trap "+locationToDistanceMap.get(loc) + " meters from last compared location is \n*" + loc.toString() + "\n";
 		}
-		
+		returnString += "*******************************************************************************\n";
 		
 		
 		
