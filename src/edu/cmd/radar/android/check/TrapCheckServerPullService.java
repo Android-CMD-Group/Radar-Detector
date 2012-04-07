@@ -34,6 +34,7 @@ import edu.cmd.radar.android.ui.MainSettingsActivity;
 
 public class TrapCheckServerPullService extends Service {
 
+	private static final String SERVER_PROVIDER = "server";
 	private static final String TRAP_CHECK_URI = "http://192.168.1.3:1188/Radar_Server/check";
 	public static final String TRAP_INFO_OBTAINED_ACTION = "edu.cmd.radar.android.check.TRAP_INFO_OBTAINED";
 	public static final String NEW_TRAP_LOCATION_INFO_KEY = "NEW_TRAP_LOCATION_INFO_KEY";
@@ -226,7 +227,7 @@ public class TrapCheckServerPullService extends Service {
 						float speed = jParser.getFloatValue();
 						jParser.nextToken();
 						float accuracy = jParser.getFloatValue();
-						trapLocations.addLocation(lat, lon, accuracy, speed);
+						trapLocations.addLocation(lat, lon, accuracy, speed, SERVER_PROVIDER);
 						jParser.nextToken();
 					}
 
