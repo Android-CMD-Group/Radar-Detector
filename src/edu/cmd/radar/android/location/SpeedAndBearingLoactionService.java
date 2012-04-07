@@ -61,7 +61,7 @@ public class SpeedAndBearingLoactionService extends Service {
 	public int onStartCommand(Intent intent, int flags, int startId) {
 
 		Log.d(MainSettingsActivity.LOG_TAG_LOCATION,
-				"SpeedAndBEaringloactionService started");
+				"SpeedAndBearingloactionService started");
 
 		// Set up GPS listener
 		locationManager = (LocationManager) this
@@ -88,9 +88,6 @@ public class SpeedAndBearingLoactionService extends Service {
 		locationManager.removeUpdates(locationListener);
 		Intent intent = new Intent();
 		Bundle b = new Bundle();
-		
-		Log.d(MainSettingsActivity.LOG_TAG_LOCATION,
-				"Speed: "+ loc.getSpeed());
 		
 		// send loc to next service
 		b.putSerializable(SpeedAndBearingLoactionService.LOCATION_KEY,
@@ -124,7 +121,7 @@ public class SpeedAndBearingLoactionService extends Service {
 
 		@Override
 		public void onLocationChanged(Location location) {
-			Log.d(MainSettingsActivity.LOG_TAG_LOCATION, "Location Changed");
+			Log.d(MainSettingsActivity.LOG_TAG_LOCATION, "Location Changed, location is now:\n"+location.toString());
 
 			// record the first location because it has the most accurate
 			// coordinates
@@ -140,8 +137,6 @@ public class SpeedAndBearingLoactionService extends Service {
 				if (location.getSpeed() != 0.0) {
 					numOfSpeeds++;
 					speedTotal += location.getSpeed();
-					Log.d(MainSettingsActivity.LOG_TAG_LOCATION,
-							"fix has speed: " + location.getSpeed());
 
 					// set the speed to the average speed. If this is being
 					// inaccurate, change to median
@@ -153,8 +148,6 @@ public class SpeedAndBearingLoactionService extends Service {
 
 			// If the info has a bearing, put it in first location info
 			if (location.hasBearing()) {
-				Log.d(MainSettingsActivity.LOG_TAG_LOCATION,
-						"fix has bearing: " + location.getBearing());
 				firstLocation.setBearing(location.getBearing());
 			}
 
@@ -162,7 +155,7 @@ public class SpeedAndBearingLoactionService extends Service {
 			// info, and shut down this service
 			if (firstLocation.hasSpeed() && firstLocation.hasBearing()) {
 				Log.d(MainSettingsActivity.LOG_TAG_LOCATION,
-						"fix has speed and bearing");
+						"fix has speed and bearing, done");
 				broadcastLocation(firstLocation);
 
 			}
@@ -172,7 +165,7 @@ public class SpeedAndBearingLoactionService extends Service {
 			// received
 			if (SystemClock.uptimeMillis() - serviceStartTime > MAX_TIME_FOR_SPEED_AND_BEARING) {
 				Log.d(MainSettingsActivity.LOG_TAG_LOCATION,
-						"Time ran out to get speed and bearing");
+						"Time ran out to get speed and bearing using location: \n"+ firstLocation.toString());
 				broadcastLocation(firstLocation);
 			}
 

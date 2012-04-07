@@ -43,6 +43,9 @@ public class TrapCheckServerPullService extends Service {
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
+				"TrapCheckPullService is started");
+		
 		IntentFilter filter = new IntentFilter();
 		filter.addAction(SpeedAndBearingLoactionService.SPEED_AND_BEARING_LOCATION_OBTAINED_ACTION);
 
@@ -56,7 +59,7 @@ public class TrapCheckServerPullService extends Service {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-				Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Location received by broadcast from SpeedAndBearingLoactionService");
+				Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Location received in TrapCheckPullService by broadcast from SpeedAndBearingLoactionService");
 				locationRecieved(i);
 
 			}
@@ -64,7 +67,7 @@ public class TrapCheckServerPullService extends Service {
 		};
 		registerReceiver(receiver, filter);
 		Intent i = new Intent(this, SpeedAndBearingLoactionService.class);
-		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Starting service to get hard fix");
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Starting SpeedAndBearingLoactionService from TrapCheckPullService to get fix");
 		startService(i);
 
 		return START_REDELIVER_INTENT;
@@ -74,17 +77,19 @@ public class TrapCheckServerPullService extends Service {
 		
 		SerializableLocation currentLocation = (SerializableLocation) i.getExtras().getSerializable(
 				SpeedAndBearingLoactionService.LOCATION_KEY);
-		
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "\t\t\tlocation is:\n"+ currentLocation.toString());
 		String toSend = writeInfoToJsonString(currentLocation);
 		
-		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "sending "+ toSend + " to server");
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Sending "+ toSend + " to server to get traps in local area");
 		
 		InputStream jsonStream = getTrapLocationsFromServer(toSend);
 
-		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "got info from server");
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "got raw info from server");
 		
 		TrapLocations trapLocations = streamToTrapLocation(jsonStream, currentLocation);
 
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "\t\t\tParesed info is\n"+ trapLocations.toString());
+		
 		Bundle oldExtras = i.getExtras();
 		oldExtras.putSerializable(NEW_TRAP_LOCATION_INFO_KEY, trapLocations);
 		Intent intent = new Intent();
@@ -136,22 +141,6 @@ public class TrapCheckServerPullService extends Service {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
-		// might not need
-		// //convert response to string
-		// try{
-		// BufferedReader reader = new BufferedReader(new
-		// InputStreamReader(is));
-		// StringBuilder sb = new StringBuilder();
-		// String line = null;
-		// while ((line = reader.readLine()) != null) {
-		// sb.append(line + "\n");
-		// }
-		// is.close();
-		// result=sb.toString();
-		// }catch(Exception e){
-		// Log.e("log_tag", "Error converting result "+e.toString());
-		// }
 
 		return stream;
 	}
@@ -216,7 +205,7 @@ public class TrapCheckServerPullService extends Service {
 
 					jParser.nextToken(); // current token is "[", move next
 
-					// messages is array, loop until token equal to "]"
+					// array, loop until token equal to "]"
 					while (jParser.nextToken() != JsonToken.END_ARRAY) {
 
 						jParser.nextToken(); // current token is "[", move next
