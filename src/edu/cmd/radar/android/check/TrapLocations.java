@@ -2,7 +2,9 @@ package edu.cmd.radar.android.check;
 
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Set;
 
 import edu.cmd.radar.android.location.SerializableLocation;
@@ -83,6 +85,28 @@ public class TrapLocations implements Serializable{
 	
 	public float getDistanceFromLocation(SerializableLocation loc) {
 		return locationToDistanceMap.get(loc);
+	}
+	
+	public String toString() {
+		String returnString = "";
+		returnString += "Origin of info: "+ originalLocation.toString() + "\n";
+		Date d = new Date(timeStamp);
+		returnString += "\n\nCreated at time: " + d.toString() + "\n";
+		returnString += "Valid for: "+ rangeOfPointsFromOrigin + " meters\n";
+		returnString += "Valid for: "+ validBearingRange + " degrees from origin bearing on either side\n";
+		
+		Iterator<SerializableLocation> it = locationToDistanceMap.keySet().iterator();
+		while (it.hasNext()){
+			SerializableLocation loc = it.next();
+			returnString += "Speed Trap is at :\n" + loc.toString() + "\n";
+			returnString += "And is "+locationToDistanceMap.get(loc) + " meters from last compared location\n";
+		}
+		
+		
+		
+		
+		return returnString;
+		
 	}
 	
 	
