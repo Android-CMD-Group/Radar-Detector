@@ -50,21 +50,32 @@ public class TrapCheckServerPullService extends Service {
 	 * The "provider" of the locations gotten from the server
 	 */
 	private static final String SERVER_PROVIDER = "server";
-	
+
 	/**
 	 * The URI of the server that gives the trap info
 	 */
 	private static final String TRAP_CHECK_URI = "http://192.168.1.3:1188/Radar_Server/check";
-	
+
 	/**
-	 * 
+	 * Filter used to broadcast that this service has gotten info
 	 */
 	public static final String TRAP_INFO_OBTAINED_ACTION = "edu.cmd.radar.android.check.TRAP_INFO_OBTAINED";
+
+	/**
+	 * The key used to store the trap info in an intent
+	 */
 	public static final String NEW_TRAP_LOCATION_INFO_KEY = "NEW_TRAP_LOCATION_INFO_KEY";
+
+	/**
+	 * The broadcast receiver that catches the location from the started service
+	 */
 	private BroadcastReceiver receiver;
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
+
+		// This method starts another service that grabs the users location,
+		// speed and bearing and then catches said services broadcast.
 
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 				"TrapCheckPullService is started");
@@ -116,24 +127,35 @@ public class TrapCheckServerPullService extends Service {
 		SerializableLocation currentLocation = (SerializableLocation) i
 				.getExtras().getSerializable(
 						SpeedAndBearingLoactionService.LOCATION_KEY);
+
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "\t\t\tlocation is:\n"
 				+ currentLocation.toString());
+
+		// Turn the current location into JSON format for easy sending to the
+		// server
+
 		String toSend = writeInfoToJsonString(currentLocation);
 
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Sending " + toSend
 				+ " to server to get traps in local area");
+		
+		// Upload the given info to the server and get the JSON response.
 
 		InputStream jsonStream = getTrapLocationsFromServer(toSend);
 
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 				"got raw info from server");
 
+		// take that JSON response and turn it into a TrapLocations object
+		
 		TrapLocations trapLocations = streamToTrapLocation(jsonStream,
 				currentLocation);
 
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 				"\t\t\tParesed info is\n" + trapLocations.toString());
 
+		// package the info up and send out a broadcast that this service is done. Then stop.
+		
 		Bundle oldExtras = i.getExtras();
 		oldExtras.putSerializable(NEW_TRAP_LOCATION_INFO_KEY, trapLocations);
 		Intent intent = new Intent();
@@ -147,10 +169,17 @@ public class TrapCheckServerPullService extends Service {
 		stopSelf();
 	}
 
+	/**
+	 * Uploads JSON info to server and receives information about nearby traps
+	 * 
+	 * @param jsonInfo the current location in JSON format
+	 * @return a stream on JSON info
+	 */
 	private InputStream getTrapLocationsFromServer(String jsonInfo) {
 
+		// THIS METHOD COULD USE SOME ERROR CATCHING
+		
 		InputStream stream = null;
-		String result = "";
 
 		StringEntity se = null;
 		try {
@@ -189,6 +218,12 @@ public class TrapCheckServerPullService extends Service {
 		return stream;
 	}
 
+	/**
+	 * Takes a location and puts it into JSON format
+	 * 
+	 * @param loc the location
+	 * @return the JSON string
+	 */
 	private String writeInfoToJsonString(SerializableLocation loc) {
 		StringWriter writer = new StringWriter();
 		JsonWriter jsonWriter = new JsonWriter(writer);
@@ -235,6 +270,13 @@ public class TrapCheckServerPullService extends Service {
 		return toSend;
 	}
 
+	/**
+	 * Turns stream of JSON info and the current location into a TrapInfo object
+	 * 
+	 * @param stream JSON from server
+	 * @param currentLocation users loc
+	 * @return nearby trap location in an object called TrapLocations
+	 */
 	private TrapLocations streamToTrapLocation(InputStream stream,
 			SerializableLocation currentLocation) {
 		JsonFactory jfactory = new JsonFactory();
