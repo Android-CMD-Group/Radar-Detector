@@ -1,4 +1,4 @@
-package edu.cmd.radar.android.report;
+package edu.cmd.radar.android.location;
 
 import android.app.Service;
 import android.content.Context;
@@ -10,11 +10,11 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.SystemClock;
 import android.util.Log;
-import edu.cmd.radar.android.location.SerializableLocation;
+import edu.cmd.radar.android.report.TrapReportUploadingService;
 import edu.cmd.radar.android.shake.ShakeListenerService;
 import edu.cmd.radar.android.ui.MainSettingsActivity;
 
-public class TrapLocationService extends Service {
+public class SpeedAndBearingLoactionService extends Service {
 
 	/**
 	 * The suggested distance to wait between gps update bursts
@@ -30,11 +30,6 @@ public class TrapLocationService extends Service {
 	 * The suggested time to wait between gps update bursts
 	 */
 	private static final int SUGGESTED_MIN_TIME = 10000;
-
-	/**
-	 * Indicates if the service is running or not.
-	 */
-	public static boolean isRunning = false;
 
 	/**
 	 * The key to the location we serialize
@@ -59,20 +54,14 @@ public class TrapLocationService extends Service {
 	 */
 	private long serviceStartTime = 0;
 
-	/**
-	 * Intent passed eo this service. Contains the time the user shook the
-	 * phone.
-	 */
-	private Intent orginalIntent;
+	public static final String SPEED_AND_BEARING_LOCATION_OBTAINED_ACTION = "edu.cmd.radar.android.location.SPEED_AND BEARING_LOCATION_OBTAINED";
+
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 
-		// lets system know not to restart this service
-		TrapLocationService.isRunning = true;
-		Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT,
-				"TrapLocationService started");
-		orginalIntent = intent;
+		Log.d(MainSettingsActivity.LOG_TAG_LOCATION,
+				"SpeedAndBearingloactionService started");
 
 		// Set up GPS listener
 		locationManager = (LocationManager) this
@@ -93,24 +82,21 @@ public class TrapLocationService extends Service {
 	 * Starts new service to upload the loc and then stops self
 	 * @param loc The location info to upload
 	 */
-	private void startUploadService(Location loc) {
+	private void broadcastLocation(Location loc) {
 		
 		// Stop getting updates
 		locationManager.removeUpdates(locationListener);
-		Intent serviceIntent = new Intent(this,
-				TrapReportUploadingService.class);
+		Intent intent = new Intent();
 		Bundle b = new Bundle();
-
+		
 		// send loc to next service
-		b.putSerializable(TrapLocationService.LOCATION_KEY,
+		b.putSerializable(SpeedAndBearingLoactionService.LOCATION_KEY,
 				new SerializableLocation(loc));
+		intent.putExtras(b);
+		
+		intent.setAction(SpeedAndBearingLoactionService.SPEED_AND_BEARING_LOCATION_OBTAINED_ACTION);
+		sendBroadcast(intent);
 
-		// send original time of shake to next service. -1 is default return value
-		b.putLong(ShakeListenerService.TIME_REPORTED_PREF_KEY, orginalIntent
-				.getLongExtra(ShakeListenerService.TIME_REPORTED_PREF_KEY, -1));
-
-		serviceIntent.putExtras(b);
-		this.startService(serviceIntent);
 		
 		// calls destroy
 		stopSelf();
@@ -120,10 +106,8 @@ public class TrapLocationService extends Service {
 	@Override
 	public void onDestroy() {
 
-		// release recourses and let system know it is ok to start this service
-		// again
+		// release recourses
 		locationManager.removeUpdates(locationListener);
-		TrapLocationService.isRunning = false;
 		super.onDestroy();
 	}
 
@@ -137,7 +121,7 @@ public class TrapLocationService extends Service {
 
 		@Override
 		public void onLocationChanged(Location location) {
-			Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT, "Location Changed");
+			Log.d(MainSettingsActivity.LOG_TAG_LOCATION, "Location Changed, location is now:\n"+location.toString());
 
 			// record the first location because it has the most accurate
 			// coordinates
@@ -153,29 +137,26 @@ public class TrapLocationService extends Service {
 				if (location.getSpeed() != 0.0) {
 					numOfSpeeds++;
 					speedTotal += location.getSpeed();
+
+					// set the speed to the average speed. If this is being
+					// inaccurate, change to median
+					firstLocation.setSpeed((float) (speedTotal / numOfSpeeds));
 				}
 
-				Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT,
-						"fix has speed: " + location.getSpeed());
-
-				// set the speed to the average speed. If this is being
-				// inaccurate, change to median
-				firstLocation.setSpeed((float) (speedTotal / numOfSpeeds));
+				
 			}
 
 			// If the info has a bearing, put it in first location info
 			if (location.hasBearing()) {
-				Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT,
-						"fix has bearing: " + location.getBearing());
 				firstLocation.setBearing(location.getBearing());
 			}
 
 			// Once bearing and speed info is received, send off the location
 			// info, and shut down this service
 			if (firstLocation.hasSpeed() && firstLocation.hasBearing()) {
-				Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT,
-						"fix has speed and bearing");
-				startUploadService(firstLocation);
+				Log.d(MainSettingsActivity.LOG_TAG_LOCATION,
+						"fix has speed and bearing, done");
+				broadcastLocation(firstLocation);
 
 			}
 
@@ -183,9 +164,9 @@ public class TrapLocationService extends Service {
 			// MAX_TIME_FOR_SPEED_AND_BEARING seconds, then just send all info
 			// received
 			if (SystemClock.uptimeMillis() - serviceStartTime > MAX_TIME_FOR_SPEED_AND_BEARING) {
-				Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT,
-						"Time ran out to get speed and bearing");
-				startUploadService(firstLocation);
+				Log.d(MainSettingsActivity.LOG_TAG_LOCATION,
+						"Time ran out to get speed and bearing using location: \n"+ firstLocation.toString());
+				broadcastLocation(firstLocation);
 			}
 
 		}

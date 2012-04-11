@@ -9,7 +9,8 @@ import android.util.Log;
 import android.widget.Toast;
 
 
-import edu.cmd.radar.android.report.TrapLocationService;
+import edu.cmd.radar.android.location.SpeedAndBearingLoactionService;
+import edu.cmd.radar.android.report.TrapReportService;
 import edu.cmd.radar.android.ui.MainSettingsActivity;
 
 public class ShakeListenerService extends Service implements Shaker.Callback {
@@ -53,11 +54,11 @@ public class ShakeListenerService extends Service implements Shaker.Callback {
 		Log.d(MainSettingsActivity.LOG_TAG_SHAKE_LISTENER, "Shaking started.");
 		
 		// no support for simultaneous reporting
-		if (!TrapLocationService.isRunning) {
+		if (!TrapReportService.isRunning) {
 			Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT, "Grabbing location");
 			
 			// Get the location and send it to the server
-			Intent i = new Intent(this, TrapLocationService.class);
+			Intent i = new Intent(this, TrapReportService.class);
 			Bundle b = new Bundle();
 			
 			// due to gps startup time, send the server the actual report time so it can calculate the actual location.

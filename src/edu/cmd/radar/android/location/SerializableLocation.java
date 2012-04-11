@@ -1,6 +1,7 @@
 package edu.cmd.radar.android.location;
 
 import java.io.Serializable;
+import java.util.Date;
 
 import android.location.Location;
 
@@ -25,6 +26,22 @@ public class SerializableLocation implements Serializable {
 	private boolean hasBearing;
 	private boolean hasSpeed;
 
+	public String toString() {
+		String returnString = "-------------------------------------------------------------------------------\n";
+		returnString += "Lat, Long:              " + latitude + ",    " + longitude + "\n";
+		returnString += "Has Speed, Speed:       " + hasSpeed  +",    " + speed + " meters/second\n";
+		returnString += "Has Accuracy, Accuracy: " + hasAccuracy + ", " + accuracy + " meters\n";
+		returnString += "Has Bearing, Bearing:   " + hasBearing  +",  " + bearing + " degrees east from north\n";
+		Date d = new Date(time);
+		returnString += "Created at time: " + d.toString() + "\n";
+		returnString += "Provided by:            " + provider + "\n";
+		returnString += "-------------------------------------------------------------------------------\n";
+		
+		
+		return returnString;
+		
+	}
+	
 	/**
 	 * Takes a location obejct and copies its members into this new object
 	 * 
@@ -38,7 +55,8 @@ public class SerializableLocation implements Serializable {
 		longitude = originalLocationObject.getLongitude();
 		provider = originalLocationObject.getProvider();
 		speed = originalLocationObject.getSpeed();
-		time = originalLocationObject.getTime();
+		// offset by one day due bug
+		time = originalLocationObject.getTime()-86400000;
 		hasAccuracy = originalLocationObject.hasAccuracy();
 		hasBearing = originalLocationObject.hasBearing();
 		hasSpeed = originalLocationObject.hasSpeed();
