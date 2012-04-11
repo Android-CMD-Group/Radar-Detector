@@ -32,10 +32,33 @@ import edu.cmd.radar.android.location.SerializableLocation;
 import edu.cmd.radar.android.location.SpeedAndBearingLoactionService;
 import edu.cmd.radar.android.ui.MainSettingsActivity;
 
+/**
+ * This class interfaces with the server to get the locations of nearby speed
+ * traps. To do this the service must obtain the users location, speed, and,
+ * bearing. This is then sent to the server and the reply is packaged and
+ * broadcast. For more info go to:
+ * https://github.com/Android-CMD-Group/Radar-Detector
+ * /wiki/Design:-getting-info-on-traps-from-server
+ * 
+ * 
+ * @author satshabad
+ * 
+ */
 public class TrapCheckServerPullService extends Service {
 
+	/**
+	 * The "provider" of the locations gotten from the server
+	 */
 	private static final String SERVER_PROVIDER = "server";
+	
+	/**
+	 * The URI of the server that gives the trap info
+	 */
 	private static final String TRAP_CHECK_URI = "http://192.168.1.3:1188/Radar_Server/check";
+	
+	/**
+	 * 
+	 */
 	public static final String TRAP_INFO_OBTAINED_ACTION = "edu.cmd.radar.android.check.TRAP_INFO_OBTAINED";
 	public static final String NEW_TRAP_LOCATION_INFO_KEY = "NEW_TRAP_LOCATION_INFO_KEY";
 	private BroadcastReceiver receiver;
@@ -45,55 +68,76 @@ public class TrapCheckServerPullService extends Service {
 
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 				"TrapCheckPullService is started");
-		
+
 		IntentFilter filter = new IntentFilter();
 		filter.addAction(SpeedAndBearingLoactionService.SPEED_AND_BEARING_LOCATION_OBTAINED_ACTION);
+
+		// get the users current location, speed, and bearing to send to the
+		// server
 
 		receiver = new BroadcastReceiver() {
 			@Override
 			public void onReceive(Context context, Intent i) {
-				
+
 				try {
 					unregisterReceiver(receiver);
 				} catch (Exception e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-				Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Location received in TrapCheckPullService by broadcast from SpeedAndBearingLoactionService");
+				Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
+						"Location received in TrapCheckPullService by broadcast from SpeedAndBearingLoactionService");
 				locationRecieved(i);
 
 			}
 
 		};
+
 		registerReceiver(receiver, filter);
 		Intent i = new Intent(this, SpeedAndBearingLoactionService.class);
-		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Starting SpeedAndBearingLoactionService from TrapCheckPullService to get fix");
+
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
+				"Starting SpeedAndBearingLoactionService from TrapCheckPullService to get fix");
+
 		startService(i);
 
 		return START_REDELIVER_INTENT;
 	}
 
+	/**
+	 * This method is called only when a location fix has been received. it
+	 * executes the main logic of the service, getting info from the server and
+	 * sending a broadcast with the info packed inside of it.
+	 * 
+	 * @param i
+	 */
 	protected void locationRecieved(Intent i) {
-		
-		SerializableLocation currentLocation = (SerializableLocation) i.getExtras().getSerializable(
-				SpeedAndBearingLoactionService.LOCATION_KEY);
-		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "\t\t\tlocation is:\n"+ currentLocation.toString());
+
+		SerializableLocation currentLocation = (SerializableLocation) i
+				.getExtras().getSerializable(
+						SpeedAndBearingLoactionService.LOCATION_KEY);
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "\t\t\tlocation is:\n"
+				+ currentLocation.toString());
 		String toSend = writeInfoToJsonString(currentLocation);
-		
-		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Sending "+ toSend + " to server to get traps in local area");
-		
+
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Sending " + toSend
+				+ " to server to get traps in local area");
+
 		InputStream jsonStream = getTrapLocationsFromServer(toSend);
 
-		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "got raw info from server");
-		
-		TrapLocations trapLocations = streamToTrapLocation(jsonStream, currentLocation);
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
+				"got raw info from server");
 
-		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "\t\t\tParesed info is\n"+ trapLocations.toString());
-		
+		TrapLocations trapLocations = streamToTrapLocation(jsonStream,
+				currentLocation);
+
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
+				"\t\t\tParesed info is\n" + trapLocations.toString());
+
 		Bundle oldExtras = i.getExtras();
 		oldExtras.putSerializable(NEW_TRAP_LOCATION_INFO_KEY, trapLocations);
 		Intent intent = new Intent();
-		
+
 		intent.putExtras(oldExtras);
 
 		intent.setAction(TRAP_INFO_OBTAINED_ACTION);
@@ -191,7 +235,8 @@ public class TrapCheckServerPullService extends Service {
 		return toSend;
 	}
 
-	private TrapLocations streamToTrapLocation(InputStream stream, SerializableLocation currentLocation) {
+	private TrapLocations streamToTrapLocation(InputStream stream,
+			SerializableLocation currentLocation) {
 		JsonFactory jfactory = new JsonFactory();
 		TrapLocations trapLocations = new TrapLocations();
 		/*** read from file ***/
@@ -216,7 +261,8 @@ public class TrapCheckServerPullService extends Service {
 						float speed = jParser.getFloatValue();
 						jParser.nextToken();
 						float accuracy = jParser.getFloatValue();
-						trapLocations.addLocation(lat, lon, accuracy, speed, SERVER_PROVIDER);
+						trapLocations.addLocation(lat, lon, accuracy, speed,
+								SERVER_PROVIDER);
 						jParser.nextToken();
 					}
 
@@ -224,9 +270,10 @@ public class TrapCheckServerPullService extends Service {
 
 				if ("distanceRange".equals(fieldname)) {
 					jParser.nextToken();
-					trapLocations.setRangeOfPointsFromOrigin(jParser.getFloatValue());
+					trapLocations.setRangeOfPointsFromOrigin(jParser
+							.getFloatValue());
 				}
-				
+
 				if ("bearingRange".equals(fieldname)) {
 					jParser.nextToken();
 					trapLocations.setValidBearingRange(jParser.getFloatValue());
@@ -249,10 +296,10 @@ public class TrapCheckServerPullService extends Service {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 		trapLocations.setOriginalLocation(currentLocation);
 		trapLocations.setTimeStamp(System.currentTimeMillis());
-		
+
 		return trapLocations;
 	}
 
@@ -267,7 +314,7 @@ public class TrapCheckServerPullService extends Service {
 		// TODO Auto-generated method stub
 		super.onCreate();
 	}
-	
+
 	@Override
 	public void onDestroy() {
 		try {
