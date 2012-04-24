@@ -56,13 +56,11 @@ public class SpeedAndBearingLoactionService extends Service {
 
 	public static final String SPEED_AND_BEARING_LOCATION_OBTAINED_ACTION = "edu.cmd.radar.android.location.SPEED_AND BEARING_LOCATION_OBTAINED";
 
-
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 
 		Log.d(MainSettingsActivity.LOG_TAG_LOCATION,
 				"SpeedAndBearingloactionService started");
-
 		// Set up GPS listener
 		locationManager = (LocationManager) this
 				.getSystemService(Context.LOCATION_SERVICE);

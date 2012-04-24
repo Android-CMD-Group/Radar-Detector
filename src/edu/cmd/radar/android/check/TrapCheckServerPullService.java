@@ -85,7 +85,6 @@ public class TrapCheckServerPullService extends Service {
 
 		// get the users current location, speed, and bearing to send to the
 		// server
-
 		receiver = new BroadcastReceiver() {
 			@Override
 			public void onReceive(Context context, Intent i) {
@@ -147,7 +146,6 @@ public class TrapCheckServerPullService extends Service {
 				"got raw info from server");
 
 		// take that JSON response and turn it into a TrapLocations object
-		
 		TrapLocations trapLocations = streamToTrapLocation(jsonStream,
 				currentLocation);
 

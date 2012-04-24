@@ -85,32 +85,36 @@ public class TrapCheckWakeUpService extends Service {
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
+		
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 				"TrapCheckWakeUpService starting");
 		Bundle extras = (Bundle) intent.getExtras();
 
+		// No trap locations bundled with the intent.
+		// Start the service that will retrieve the the trap locations
 		if (extras == null) {
 			Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 					"There is no prior info on any traps");
 			startServiceToGetTrapInfo();
-		} else {
-
-			// trapLocations was passed here from the last time this service
-			// went to sleep
+		} 
+		// Trap locations were bundled with the intent. Possibility that they
+		// were passed in from the last time this service went to sleep.
+		else {
+			
 			trapLocations = (TrapLocations) intent.getExtras().getSerializable(
 					TRAP_LOCATIONS_INFO_KEY);
-
 			Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 					"\t\t\tThere is prior info on some traps\n"
 							+ trapLocations.toString());
+			
 			// This is the location obtained from the last time this service was
 			// active
 			lastKnownLocation = (SerializableLocation) intent.getExtras()
 					.getSerializable(LAST_LOCATION_KEY);
-
 			Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 					"\t\t\tThe last known location is:\n" + lastKnownLocation);
 
+			// Intent filter that listens for when a simple location is obtained
 			IntentFilter filter = new IntentFilter();
 			filter.addAction(SimpleLocationService.SIMPLE_LOCATION_OBTAINED_ACTION);
 
@@ -129,9 +133,7 @@ public class TrapCheckWakeUpService extends Service {
 									+ currentLocation);
 
 					locationRecieved(currentLocation);
-
 				}
-
 			};
 
 			// Get a new simple location fix so that new distances can be
@@ -155,6 +157,8 @@ public class TrapCheckWakeUpService extends Service {
 	 */
 	private void startServiceToGetTrapInfo() {
 
+		// Create an intent filter and BroadcastReceiver that listens
+		// for when trap information is obtained.
 		IntentFilter filter = new IntentFilter();
 		filter.addAction(TrapCheckServerPullService.TRAP_INFO_OBTAINED_ACTION);
 
@@ -183,6 +187,7 @@ public class TrapCheckWakeUpService extends Service {
 
 		};
 		registerReceiver(serverInfoReceiver, filter);
+		
 		Intent i = new Intent(this, TrapCheckServerPullService.class);
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 				"Starting TrapCheckServerPullService to get trapinfo and location from TrapCheckWakeUpService");
@@ -222,19 +227,21 @@ public class TrapCheckWakeUpService extends Service {
 			startServiceToGetTrapInfo();
 			return;
 		}
-		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Info is still valid");
-
-		// Pick the closest target within alert range and set and alert to tell
-		// the user that the trap is approaching soon
-		setAlertForClosestTarget(currentLocation);
-
-		// Find out how long this service should sleep and set the alarm for
-		// that many milliseconds
-		long timeToSleep = getTimeToSleep(currentLocation);
-		setAlarm(timeToSleep, currentLocation);
-
-		stopSelf();
-
+		// trapLocations are current and up-to-date.
+		else {
+			Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Info is still valid");
+	
+			// Pick the closest target within alert range and set and alert to tell
+			// the user that the trap is approaching soon
+			setAlertForClosestTarget(currentLocation);
+	
+			// Find out how long this service should sleep and set the alarm for
+			// that many milliseconds
+			long timeToSleep = getTimeToSleep(currentLocation);
+			setAlarm(timeToSleep, currentLocation);
+	
+			stopSelf();
+		}
 	}
 
 	/**
@@ -312,7 +319,7 @@ public class TrapCheckWakeUpService extends Service {
 	}
 
 	/**
-	 * This check to seee if the {@link #trapLocations} info is out of date or
+	 * This check to see if the {@link #trapLocations} info is out of date or
 	 * not. It uses three criteria in this order: Range from origin compared to
 	 * the valid range for the server for the given points.
 	 * 

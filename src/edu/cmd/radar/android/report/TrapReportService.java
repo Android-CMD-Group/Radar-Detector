@@ -41,7 +41,6 @@ public class TrapReportService extends Service {
 			public void onReceive(Context context, Intent i) {
 				unregisterReceiver(receiver);
 				startUploader(i);
-
 			}
 		};
 		registerReceiver(receiver, filter);
@@ -65,19 +64,16 @@ public class TrapReportService extends Service {
 		Intent serviceIntent = new Intent(this,
 				TrapReportUploadingService.class);
 		Bundle b = new Bundle();
-
 		// send loc to next service
 		b.putSerializable(
 				SpeedAndBearingLoactionService.LOCATION_KEY,
-				oldIntent
-						.getSerializableExtra(SpeedAndBearingLoactionService.LOCATION_KEY));
-
+				oldIntent.getSerializableExtra(SpeedAndBearingLoactionService.LOCATION_KEY));
 		// send original time of shake to next service. -1 is default return
 		// value
 		b.putLong(ShakeListenerService.TIME_REPORTED_PREF_KEY, originalIntent
 				.getLongExtra(ShakeListenerService.TIME_REPORTED_PREF_KEY, -1));
-
 		serviceIntent.putExtras(b);
+		
 		this.startService(serviceIntent);
 
 		// calls destroy

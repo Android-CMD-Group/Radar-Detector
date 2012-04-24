@@ -76,7 +76,7 @@ public class Shaker {
 		this.cb = cb;
 
 		/**
-		 * Build the SensorManager and register a SesnorEventListener
+		 * Build the SensorManager and register a SensorEventListener
 		 */
 		this.sensorMgr = (SensorManager) ctxt
 				.getSystemService(Context.SENSOR_SERVICE);
@@ -127,7 +127,6 @@ public class Shaker {
 
 	public interface Callback {
 		void shakingStarted();
-
 		void shakingStopped();
 	}
 }

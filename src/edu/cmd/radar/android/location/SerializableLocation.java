@@ -43,7 +43,7 @@ public class SerializableLocation implements Serializable {
 	}
 	
 	/**
-	 * Takes a location obejct and copies its members into this new object
+	 * Takes a location object and copies its members into this new object
 	 * 
 	 * @param originalLocationObject
 	 */

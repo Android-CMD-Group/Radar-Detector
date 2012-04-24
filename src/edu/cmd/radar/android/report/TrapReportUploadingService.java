@@ -68,7 +68,6 @@ public class TrapReportUploadingService extends IntentService {
 			} else {
 				jsonWriter.name("accuracy").nullValue();
 			}
-
 			
 			if (location.hasSpeed()) {
 				jsonWriter.name("speed").value(location.getSpeed());
@@ -125,7 +124,6 @@ public class TrapReportUploadingService extends IntentService {
 		try {
 			httpclient.execute(httpost, responseHandler);
 		} catch (ClientProtocolException e) {
-
 			e.printStackTrace();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
