@@ -158,7 +158,7 @@ public class TrapCheckWakeUpService extends Service {
 		IntentFilter filter = new IntentFilter();
 		filter.addAction(TrapCheckServerPullService.TRAP_INFO_OBTAINED_ACTION);
 
-		serverInfoReceiver = new BroadcastReceiver() {
+		this.serverInfoReceiver = new BroadcastReceiver() {
 			@Override
 			public void onReceive(Context context, Intent i) {
 				unregisterReceiver(serverInfoReceiver);

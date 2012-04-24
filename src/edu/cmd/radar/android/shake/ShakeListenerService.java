@@ -9,7 +9,6 @@ import android.util.Log;
 import android.widget.Toast;
 
 
-import edu.cmd.radar.android.location.SpeedAndBearingLoactionService;
 import edu.cmd.radar.android.report.TrapReportService;
 import edu.cmd.radar.android.ui.MainSettingsActivity;
 

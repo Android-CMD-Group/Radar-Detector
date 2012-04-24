@@ -154,14 +154,13 @@ public class TrapCheckServerPullService extends Service {
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 				"\t\t\tParesed info is\n" + trapLocations.toString());
 
-		// package the info up and send out a broadcast that this service is done. Then stop.
-		
+		// Package the info up
 		Bundle oldExtras = i.getExtras();
 		oldExtras.putSerializable(NEW_TRAP_LOCATION_INFO_KEY, trapLocations);
 		Intent intent = new Intent();
-
 		intent.putExtras(oldExtras);
 
+		// Send out a broadcast that this service is done.
 		intent.setAction(TRAP_INFO_OBTAINED_ACTION);
 		sendBroadcast(intent);
 
