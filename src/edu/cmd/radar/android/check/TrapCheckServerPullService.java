@@ -89,13 +89,7 @@ public class TrapCheckServerPullService extends Service {
 		receiver = new BroadcastReceiver() {
 			@Override
 			public void onReceive(Context context, Intent i) {
-
-				try {
 					unregisterReceiver(receiver);
-				} catch (Exception e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
 				Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 						"Location received in TrapCheckPullService by broadcast from SpeedAndBearingLoactionService");
 				locationRecieved(i);
