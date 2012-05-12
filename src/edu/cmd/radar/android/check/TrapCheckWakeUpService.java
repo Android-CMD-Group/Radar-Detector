@@ -27,6 +27,8 @@ import edu.cmd.radar.android.ui.MainSettingsActivity;
  * list of nearby traps. It receives this information in broadcasts through
  * registered receivers.
  * 
+ * THIS CLASS ASSUMES GPS IS ACTIVATED
+ * 
  * @author satshabad
  * 
  */
@@ -151,7 +153,9 @@ public class TrapCheckWakeUpService extends Service {
 	 * and needs to be updated. This method registers a receiver to get the info
 	 * once it is obtained from the server by another service. This also gets
 	 * the uers current location with speed and bearing. Once done it always
-	 * calls {@link #locationRecieved(SerializableLocation)}
+	 * calls {@link #locationRecieved(SerializableLocation)}.
+	 * 
+	 * OR if it receives a nul loc or tracplocations, it stops this service
 	 */
 	private void startServiceToGetTrapInfo() {
 
@@ -166,9 +170,16 @@ public class TrapCheckWakeUpService extends Service {
 				trapLocations = (TrapLocations) i.getExtras().getSerializable(
 						TrapCheckServerPullService.NEW_TRAP_LOCATION_INFO_KEY);
 
+				// if we can't get any location or trapinfo, then just stop.
+				if (trapLocations == null) {
+					stopSelf();
+					return;
+				}
+
 				SerializableLocation currentLocation = (SerializableLocation) i
 						.getExtras().getSerializable(
 								SpeedAndBearingLoactionService.LOCATION_KEY);
+
 				Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 						"Got info from TrapCheckServerPullService broadcast in TrapCheckWakeUpService\n"
 								+ "\t\t\tCurrent Location is set to:\n"
@@ -567,26 +578,27 @@ public class TrapCheckWakeUpService extends Service {
 	 * service can wake {@link #RATIO_OF_DISTANCE_TO_WAIT} ratio of the way
 	 * there.
 	 * 
-	 * @param currentLocation the current location
+	 * @param currentLocation
+	 *            the current location
 	 * @return the number of millis to sleep
 	 */
 	private long getTimeToSleep(SerializableLocation currentLocation) {
 		Collection<Float> distances = trapLocations.getDistanceCollection();
 		Float dis = Collections.min(distances);
 		Float speed = getCurrentSpeed(currentLocation);
-		
+
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Closest Trap is "
 				+ dis + " meters away\n " + "Current speed is : " + speed
 				+ " meters/second\n" + "Sleep for : "
 				+ (long) ((long) (dis / speed) * RATIO_OF_DISTANCE_TO_WAIT)
 				+ " seconds");
-		
+
 		return (long) ((long) (dis / speed) * 1000 * RATIO_OF_DISTANCE_TO_WAIT);
 	}
 
 	/**
-	 * Gets the users current sleep based on the speed in currentLocation,
-	 * or the calculated speed between currentLocation and
+	 * Gets the users current sleep based on the speed in currentLocation, or
+	 * the calculated speed between currentLocation and
 	 * {@link #lastKnownLocation}. Returns -1 if no speed could be determined.
 	 * 
 	 * @param currentLocation

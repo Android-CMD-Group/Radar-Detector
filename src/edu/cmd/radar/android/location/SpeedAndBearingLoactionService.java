@@ -56,7 +56,6 @@ public class SpeedAndBearingLoactionService extends Service {
 
 	public static final String SPEED_AND_BEARING_LOCATION_OBTAINED_ACTION = "edu.cmd.radar.android.location.SPEED_AND BEARING_LOCATION_OBTAINED";
 
-
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 
@@ -79,25 +78,31 @@ public class SpeedAndBearingLoactionService extends Service {
 	}
 
 	/**
-	 * Starts new service to upload the loc and then stops self
-	 * @param loc The location info to upload
+	 * Sends out a broadcast with the location, or null of no speed and bearing
+	 * loc was found
+	 * 
+	 * @param loc
+	 *            The location info to upload
 	 */
 	private void broadcastLocation(Location loc) {
-		
+
 		// Stop getting updates
 		locationManager.removeUpdates(locationListener);
 		Intent intent = new Intent();
 		Bundle b = new Bundle();
-		
-		// send loc to next service
-		b.putSerializable(SpeedAndBearingLoactionService.LOCATION_KEY,
-				new SerializableLocation(loc));
+		if (loc != null) {
+			// send loc to next service
+			b.putSerializable(SpeedAndBearingLoactionService.LOCATION_KEY,
+					new SerializableLocation(loc));
+
+		} else {
+			// send null to next service to indicate failure
+			b.putSerializable(SpeedAndBearingLoactionService.LOCATION_KEY, null);
+		}
 		intent.putExtras(b);
-		
 		intent.setAction(SpeedAndBearingLoactionService.SPEED_AND_BEARING_LOCATION_OBTAINED_ACTION);
 		sendBroadcast(intent);
 
-		
 		// calls destroy
 		stopSelf();
 
@@ -121,7 +126,9 @@ public class SpeedAndBearingLoactionService extends Service {
 
 		@Override
 		public void onLocationChanged(Location location) {
-			Log.d(MainSettingsActivity.LOG_TAG_LOCATION, "Location Changed, location is now:\n"+location.toString());
+			Log.d(MainSettingsActivity.LOG_TAG_LOCATION,
+					"Location Changed, location is now:\n"
+							+ location.toString());
 
 			// record the first location because it has the most accurate
 			// coordinates
@@ -143,7 +150,6 @@ public class SpeedAndBearingLoactionService extends Service {
 					firstLocation.setSpeed((float) (speedTotal / numOfSpeeds));
 				}
 
-				
 			}
 
 			// If the info has a bearing, put it in first location info
@@ -165,8 +171,8 @@ public class SpeedAndBearingLoactionService extends Service {
 			// received
 			if (SystemClock.uptimeMillis() - serviceStartTime > MAX_TIME_FOR_SPEED_AND_BEARING) {
 				Log.d(MainSettingsActivity.LOG_TAG_LOCATION,
-						"Time ran out to get speed and bearing using location: \n"+ firstLocation.toString());
-				broadcastLocation(firstLocation);
+						"Time ran out to get speed and bearing, sending back null ");
+				broadcastLocation(null);
 			}
 
 		}

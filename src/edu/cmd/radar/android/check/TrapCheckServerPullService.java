@@ -89,7 +89,7 @@ public class TrapCheckServerPullService extends Service {
 		receiver = new BroadcastReceiver() {
 			@Override
 			public void onReceive(Context context, Intent i) {
-					unregisterReceiver(receiver);
+				unregisterReceiver(receiver);
 				Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 						"Location received in TrapCheckPullService by broadcast from SpeedAndBearingLoactionService");
 				locationRecieved(i);
@@ -122,6 +122,12 @@ public class TrapCheckServerPullService extends Service {
 				.getExtras().getSerializable(
 						SpeedAndBearingLoactionService.LOCATION_KEY);
 
+		if (currentLocation == null) {
+			Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Location could not be found... at TrapCheckPullService");
+			broadcastServiceFailed();
+			return;
+		}
+
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "\t\t\tlocation is:\n"
 				+ currentLocation.toString());
 
@@ -132,7 +138,7 @@ public class TrapCheckServerPullService extends Service {
 
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Sending " + toSend
 				+ " to server to get traps in local area");
-		
+
 		// Upload the given info to the server and get the JSON response.
 
 		InputStream jsonStream = getTrapLocationsFromServer(toSend);
@@ -141,15 +147,16 @@ public class TrapCheckServerPullService extends Service {
 				"got raw info from server");
 
 		// take that JSON response and turn it into a TrapLocations object
-		
+
 		TrapLocations trapLocations = streamToTrapLocation(jsonStream,
 				currentLocation);
 
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 				"\t\t\tParesed info is\n" + trapLocations.toString());
 
-		// package the info up and send out a broadcast that this service is done. Then stop.
-		
+		// package the info up and send out a broadcast that this service is
+		// done. Then stop.
+
 		Bundle oldExtras = i.getExtras();
 		oldExtras.putSerializable(NEW_TRAP_LOCATION_INFO_KEY, trapLocations);
 		Intent intent = new Intent();
@@ -163,16 +170,33 @@ public class TrapCheckServerPullService extends Service {
 		stopSelf();
 	}
 
+	public void broadcastServiceFailed() {
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
+				"Safely stopping TrapCheckPullService");
+		Bundle b = new Bundle();
+		b.putSerializable(NEW_TRAP_LOCATION_INFO_KEY, null);
+		Intent intent = new Intent();
+
+		intent.putExtras(b);
+
+		intent.setAction(TRAP_INFO_OBTAINED_ACTION);
+		sendBroadcast(intent);
+
+		// calls destroy
+		stopSelf();
+	}
+
 	/**
 	 * Uploads JSON info to server and receives information about nearby traps
 	 * 
-	 * @param jsonInfo the current location in JSON format
+	 * @param jsonInfo
+	 *            the current location in JSON format
 	 * @return a stream on JSON info
 	 */
 	private InputStream getTrapLocationsFromServer(String jsonInfo) {
 
 		// THIS METHOD COULD USE SOME ERROR CATCHING
-		
+
 		InputStream stream = null;
 
 		StringEntity se = null;
@@ -192,20 +216,20 @@ public class TrapCheckServerPullService extends Service {
 		try {
 			response = httpclient.execute(httpost);
 		} catch (ClientProtocolException e) {
-			// TODO Auto-generated catch block
+			broadcastServiceFailed();
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			broadcastServiceFailed();
 			e.printStackTrace();
 		}
 		HttpEntity entity = response.getEntity();
 		try {
 			stream = entity.getContent();
 		} catch (IllegalStateException e) {
-			// TODO Auto-generated catch block
+			broadcastServiceFailed();
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			broadcastServiceFailed();
 			e.printStackTrace();
 		}
 
@@ -215,7 +239,8 @@ public class TrapCheckServerPullService extends Service {
 	/**
 	 * Takes a location and puts it into JSON format
 	 * 
-	 * @param loc the location
+	 * @param loc
+	 *            the location
 	 * @return the JSON string
 	 */
 	private String writeInfoToJsonString(SerializableLocation loc) {
@@ -256,6 +281,7 @@ public class TrapCheckServerPullService extends Service {
 		} catch (IOException e) {
 			Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT,
 					"Problem writing JSON");
+			broadcastServiceFailed();
 			e.printStackTrace();
 		}
 
@@ -267,8 +293,10 @@ public class TrapCheckServerPullService extends Service {
 	/**
 	 * Turns stream of JSON info and the current location into a TrapInfo object
 	 * 
-	 * @param stream JSON from server
-	 * @param currentLocation users loc
+	 * @param stream
+	 *            JSON from server
+	 * @param currentLocation
+	 *            users loc
 	 * @return nearby trap location in an object called TrapLocations
 	 */
 	private TrapLocations streamToTrapLocation(InputStream stream,
@@ -319,17 +347,17 @@ public class TrapCheckServerPullService extends Service {
 			jParser.close();
 
 		} catch (JsonParseException e) {
-			// TODO Auto-generated catch block
+			broadcastServiceFailed();
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			broadcastServiceFailed();
 			e.printStackTrace();
 		}
 
 		try {
 			stream.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			broadcastServiceFailed();
 			e.printStackTrace();
 		}
 
