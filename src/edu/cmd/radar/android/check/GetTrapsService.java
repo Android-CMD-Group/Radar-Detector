@@ -1,7 +1,10 @@
 package edu.cmd.radar.android.check;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectOutputStream;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 
@@ -29,22 +32,17 @@ import android.util.Log;
 import com.google.gson.stream.JsonWriter;
 
 import edu.cmd.radar.android.location.SerializableLocation;
-import edu.cmd.radar.android.location.SpeedAndBearingLoactionService;
+import edu.cmd.radar.android.location.GetLocationService;
 import edu.cmd.radar.android.ui.MainSettingsActivity;
 
 /**
- * This class interfaces with the server to get the locations of nearby speed
- * traps. To do this the service must obtain the users location, speed, and,
- * bearing. This is then sent to the server and the reply is packaged and
- * broadcast. For more info go to:
- * https://github.com/Android-CMD-Group/Radar-Detector
- * /wiki/Design:-getting-info-on-traps-from-server
- * 
+ * This service sends location, speed, and bearing info to the server and recieves back locations of traps. 
+ * It packages those locations and broadcasts them off.
  * 
  * @author satshabad
  * 
  */
-public class TrapCheckServerPullService extends Service {
+public class GetTrapsService extends Service {
 
 	/**
 	 * The "provider" of the locations gotten from the server
@@ -62,49 +60,26 @@ public class TrapCheckServerPullService extends Service {
 	public static final String TRAP_INFO_OBTAINED_ACTION = "edu.cmd.radar.android.check.TRAP_INFO_OBTAINED";
 
 	/**
+	 * Filter used to broadcast that this service has gotten info
+	 */
+	public static final String OBTAINING_TRAP_INFO_FAILED_ACTION = "edu.cmd.radar.android.check.OBTAINING_TRAP_INFO_FAILED_ACTION";
+
+	/**
 	 * The key used to store the trap info in an intent
 	 */
 	public static final String NEW_TRAP_LOCATION_INFO_KEY = "NEW_TRAP_LOCATION_INFO_KEY";
 
-	/**
-	 * The broadcast receiver that catches the location from the started service
-	 */
-	private BroadcastReceiver receiver;
+	public static final String TRAP_LOCATIONS_FILE_NAME = "TRAP_LOCATIONS_FILE_NAME";
+
+	public static final String LAST_KNOWN_LOCATION_FILE_NAME = "LAST_KNOWN_LOCATION_FILE_NAME";
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 
-		// This method starts another service that grabs the users location,
-		// speed and bearing and then catches said services broadcast.
-
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 				"TrapCheckPullService is started");
 
-		IntentFilter filter = new IntentFilter();
-		filter.addAction(SpeedAndBearingLoactionService.SPEED_AND_BEARING_LOCATION_OBTAINED_ACTION);
-
-		// get the users current location, speed, and bearing to send to the
-		// server
-
-		receiver = new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent i) {
-				unregisterReceiver(receiver);
-				Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
-						"Location received in TrapCheckPullService by broadcast from SpeedAndBearingLoactionService");
-				locationRecieved(i);
-
-			}
-
-		};
-
-		registerReceiver(receiver, filter);
-		Intent i = new Intent(this, SpeedAndBearingLoactionService.class);
-
-		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
-				"Starting SpeedAndBearingLoactionService from TrapCheckPullService to get fix");
-
-		startService(i);
+		locationRecieved(intent);
 
 		return START_REDELIVER_INTENT;
 	}
@@ -112,7 +87,7 @@ public class TrapCheckServerPullService extends Service {
 	/**
 	 * This method is called only when a location fix has been received. it
 	 * executes the main logic of the service, getting info from the server and
-	 * sending a broadcast with the info packed inside of it.
+	 * writes it to a file. Then it sends a broadcast indicating that the file is ready to be read.
 	 * 
 	 * @param i
 	 */
@@ -120,13 +95,7 @@ public class TrapCheckServerPullService extends Service {
 
 		SerializableLocation currentLocation = (SerializableLocation) i
 				.getExtras().getSerializable(
-						SpeedAndBearingLoactionService.LOCATION_KEY);
-
-		if (currentLocation == null) {
-			Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Location could not be found... at TrapCheckPullService");
-			broadcastServiceFailed();
-			return;
-		}
+						GetLocationService.LOCATION_KEY);
 
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "\t\t\tlocation is:\n"
 				+ currentLocation.toString());
@@ -157,12 +126,31 @@ public class TrapCheckServerPullService extends Service {
 		// package the info up and send out a broadcast that this service is
 		// done. Then stop.
 
-		Bundle oldExtras = i.getExtras();
-		oldExtras.putSerializable(NEW_TRAP_LOCATION_INFO_KEY, trapLocations);
+
+		
+		try {
+			FileOutputStream fos = this.openFileOutput(TRAP_LOCATIONS_FILE_NAME, Context.MODE_PRIVATE);
+			ObjectOutputStream os = new ObjectOutputStream(fos);
+			os.writeObject(trapLocations);
+			
+			os.close();
+			
+			FileOutputStream fos2 = this.openFileOutput(LAST_KNOWN_LOCATION_FILE_NAME, Context.MODE_PRIVATE);
+			ObjectOutputStream os2 = new ObjectOutputStream(fos2);
+			os2.writeObject(currentLocation);
+			
+			os2.close();
+			
+		} catch (FileNotFoundException e) {
+			broadcastServiceFailed();
+			e.printStackTrace();
+		} catch (IOException e) {
+			broadcastServiceFailed();
+			e.printStackTrace();
+		}
+		
 		Intent intent = new Intent();
-
-		intent.putExtras(oldExtras);
-
+		
 		intent.setAction(TRAP_INFO_OBTAINED_ACTION);
 		sendBroadcast(intent);
 
@@ -170,16 +158,14 @@ public class TrapCheckServerPullService extends Service {
 		stopSelf();
 	}
 
+	/**
+	 * If anything goes wrong, send out a broadcast that says so.
+	 */
 	public void broadcastServiceFailed() {
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 				"Safely stopping TrapCheckPullService");
-		Bundle b = new Bundle();
-		b.putSerializable(NEW_TRAP_LOCATION_INFO_KEY, null);
 		Intent intent = new Intent();
-
-		intent.putExtras(b);
-
-		intent.setAction(TRAP_INFO_OBTAINED_ACTION);
+		intent.setAction(OBTAINING_TRAP_INFO_FAILED_ACTION);
 		sendBroadcast(intent);
 
 		// calls destroy
@@ -369,22 +355,16 @@ public class TrapCheckServerPullService extends Service {
 
 	@Override
 	public IBinder onBind(Intent intent) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public void onCreate() {
-		// TODO Auto-generated method stub
 		super.onCreate();
 	}
 
 	@Override
 	public void onDestroy() {
-		try {
-			unregisterReceiver(receiver);
-		} catch (Exception e) {
-		}
 		super.onDestroy();
 	}
 }

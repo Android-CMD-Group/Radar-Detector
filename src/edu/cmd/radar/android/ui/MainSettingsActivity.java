@@ -6,8 +6,10 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import edu.cmd.radar.android.R;
-import edu.cmd.radar.android.check.TrapCheckServerPullService;
-import edu.cmd.radar.android.check.TrapCheckWakeUpService;
+import edu.cmd.radar.android.check.GetTrapsService;
+import edu.cmd.radar.android.check.TrapMonitorService;
+import edu.cmd.radar.android.location.GetLocationService;
+import edu.cmd.radar.android.location.LocationRequestReceiver;
 import edu.cmd.radar.android.shake.ShakeListenerService;
 
 public class MainSettingsActivity extends Activity {
@@ -30,8 +32,12 @@ public class MainSettingsActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
 		Log.d(MainSettingsActivity.LOG_TAG, "MainSettingsActivity created");
-		Intent i = new Intent(this, TrapCheckWakeUpService.class);
-		startService(i);
+		Intent broadcastIntent = new Intent();
+		Bundle b = new Bundle();
+		b.putString(GetLocationService.LOCATION_TYPE_REQUEST, GetLocationService.SPEED_AND_BEARING_LOCATION_TYPE);
+		broadcastIntent.putExtras(b);
+		broadcastIntent.setAction(LocationRequestReceiver.GET_LOCATION_ACTION);
+		sendBroadcast(broadcastIntent);
 	}
 	
 	// Starts the ShakeListenerService

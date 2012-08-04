@@ -20,7 +20,7 @@ import android.util.Log;
 import com.google.gson.stream.JsonWriter;
 
 import edu.cmd.radar.android.location.SerializableLocation;
-import edu.cmd.radar.android.location.SpeedAndBearingLoactionService;
+import edu.cmd.radar.android.location.GetLocationService;
 import edu.cmd.radar.android.shake.ShakeListenerService;
 import edu.cmd.radar.android.ui.MainSettingsActivity;
 
@@ -48,7 +48,7 @@ public class TrapReportUploadingService extends IntentService {
 		
 		// location info
 		SerializableLocation location = (SerializableLocation) b
-				.getSerializable(SpeedAndBearingLoactionService.LOCATION_KEY);
+				.getSerializable(GetLocationService.LOCATION_KEY);
 
 		// using GSON library, convert location into a JSON object string
 		StringWriter writer = new StringWriter();

@@ -28,37 +28,49 @@
 
         <service android:name=".drive.DriveListenerService" >
         </service>
-        
         <service android:name=".report.TrapReportUploadingService" >
         </service>
-                
-        <service android:name=".location.SpeedAndBearingLoactionService" > </service>
-         <service android:name=".report.TrapReportService" > </service>
-
-         <service android:name=".check.TrapCheckWakeUpService" > </service>
-          <service android:name=".check.TrapCheckServerPullService" > </service>
-         <service
+        <service android:name=".location.GetLocationService" >
+        </service>
+        <service android:name=".report.TrapReportService" >
+        </service>
+        <service android:name=".check.TrapMonitorService" >
+        </service>
+        <service android:name=".check.GetTrapsService" >
+        </service>
+        <service
             android:name=".shake.ShakeListenerService"
-            android:process=":shake_listener">
+            android:process=":shake_listener" >
         </service>
 
         <receiver android:name=".drive.WifiChangeReceiver" >
-            <intent-filter>         
+            <intent-filter>
                 <action android:name="edu.cmd.radar.android.drive.TIMER_FOR_LOCATION_SLEEP" >
                 </action>
                 <action android:name="android.net.wifi.STATE_CHANGE" >
                 </action>
             </intent-filter>
         </receiver>
-        
-        <receiver android:name=".check.TrapCheckReceiver" >
-            <intent-filter>         
-                <action android:name="edu.cmd.radar.android.check.CHECK_DISTANCE_FROM_TRAPS" >
+        <receiver android:name=".check.TrapMonitorReceiver" >
+            <intent-filter>
+                <action android:name="edu.cmd.radar.android.check.TRAP_INFO_OBTAINED" >
+                </action>
+                <action android:name="edu.cmd.radar.android.report.SIMPLE_GPS_LOCATION_OBTAINED" >
                 </action>
             </intent-filter>
         </receiver>
-        
-        
+        <receiver android:name=".check.GetTrapsReceiver" >
+            <intent-filter>
+                <action android:name="edu.cmd.radar.android.location.LOCATION_OBTAINED_WITH_SPEED_AND_BEARING_ACTION" >
+                </action>
+            </intent-filter>
+        </receiver>
+        <receiver android:name=".location.LocationRequestReceiver" >
+            <intent-filter>
+                <action android:name="edu.cmd.radar.android.location.GET_LOCATION_ACTION" >
+                </action>
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

@@ -8,7 +8,8 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
-import edu.cmd.radar.android.location.SpeedAndBearingLoactionService;
+import edu.cmd.radar.android.location.GetLocationService;
+import edu.cmd.radar.android.location.LocationRequestReceiver;
 import edu.cmd.radar.android.shake.ShakeListenerService;
 import edu.cmd.radar.android.ui.MainSettingsActivity;
 
@@ -31,10 +32,11 @@ public class TrapReportService extends Service {
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT, "onStart of trapReportService called.");
 		originalIntent = intent;
+		intent.getExtras().putString(GetLocationService.LOCATION_TYPE_REQUEST, GetLocationService.SPEED_AND_BEARING_LOCATION_TYPE);
 		// lets system know not to restart this service
 		TrapReportService.isRunning = true;
 		IntentFilter filter = new IntentFilter();
-		filter.addAction(SpeedAndBearingLoactionService.SPEED_AND_BEARING_LOCATION_OBTAINED_ACTION);
+		filter.addAction(LocationRequestReceiver.GET_LOCATION_ACTION);
 
 		receiver = new BroadcastReceiver() {
 			@Override
@@ -45,7 +47,7 @@ public class TrapReportService extends Service {
 			}
 		};
 		registerReceiver(receiver, filter);
-		Intent i = new Intent(this, SpeedAndBearingLoactionService.class);
+		Intent i = new Intent(this, GetLocationService.class);
 		startService(i);
 		
 		return START_REDELIVER_INTENT;
@@ -68,9 +70,9 @@ public class TrapReportService extends Service {
 
 		// send loc to next service
 		b.putSerializable(
-				SpeedAndBearingLoactionService.LOCATION_KEY,
+				GetLocationService.LOCATION_KEY,
 				oldIntent
-						.getSerializableExtra(SpeedAndBearingLoactionService.LOCATION_KEY));
+						.getSerializableExtra(GetLocationService.LOCATION_KEY));
 
 		// send original time of shake to next service. -1 is default return
 		// value

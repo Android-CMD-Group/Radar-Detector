@@ -14,12 +14,12 @@ import edu.cmd.radar.android.report.TrapReportUploadingService;
 import edu.cmd.radar.android.shake.ShakeListenerService;
 import edu.cmd.radar.android.ui.MainSettingsActivity;
 
-public class SpeedAndBearingLoactionService extends Service {
+public class GetLocationService extends Service {
 
 	/**
 	 * The suggested distance to wait between gps update bursts
 	 */
-	private static final int SUGGESTED_MIN_DISTANCE = 1;
+	private static final int MIN_WAIT_DISTANCE = 1;
 
 	/**
 	 * The maximum time to wait for getting speed and bearing
@@ -29,12 +29,20 @@ public class SpeedAndBearingLoactionService extends Service {
 	/**
 	 * The suggested time to wait between gps update bursts
 	 */
-	private static final int SUGGESTED_MIN_TIME = 10000;
+	private static final int MIN_WAIT_TIME = 10000;
 
 	/**
 	 * The key to the location we serialize
 	 */
 	public static final String LOCATION_KEY = "LOCATION_KEY";
+
+	public static final String LOCATION_TYPE_REQUEST = "LOCATION_TYPE_REQUEST";
+
+	// The different types of locations to request
+	
+	public static final String SPEED_AND_BEARING_LOCATION_TYPE = "SPEED_AND_BEARING_LOCATION_TYPE";
+
+	public static final String SIMPLE_GPS_LOCATION_TYPE = "SIMPLE_GPS_LOCATION_TYPE";
 
 	/**
 	 * The location object to send to the server
@@ -46,7 +54,7 @@ public class SpeedAndBearingLoactionService extends Service {
 	/**
 	 * Custom class to handle gps updates
 	 */
-	private GpsListener locationListener = null;
+	private LocationListener locationListener = null;
 
 	/**
 	 * Time at which service was started, used to measure against
@@ -54,20 +62,39 @@ public class SpeedAndBearingLoactionService extends Service {
 	 */
 	private long serviceStartTime = 0;
 
-	public static final String SPEED_AND_BEARING_LOCATION_OBTAINED_ACTION = "edu.cmd.radar.android.location.SPEED_AND BEARING_LOCATION_OBTAINED";
-
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-
+		
 		Log.d(MainSettingsActivity.LOG_TAG_LOCATION,
-				"SpeedAndBearingloactionService started");
+				"GetLocationService Started");
+	
+		if(intent.getExtras().getString(LOCATION_TYPE_REQUEST).equals(SPEED_AND_BEARING_LOCATION_TYPE)){
+			Log.d(MainSettingsActivity.LOG_TAG_LOCATION,
+					"Getting location with speed and bearing");
+			
+			// Set up GPS listener
+			locationManager = (LocationManager) this
+					.getSystemService(Context.LOCATION_SERVICE);
 
-		// Set up GPS listener
-		locationManager = (LocationManager) this
-				.getSystemService(Context.LOCATION_SERVICE);
-		locationListener = new GpsListener();
-		locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
-				SUGGESTED_MIN_TIME, SUGGESTED_MIN_DISTANCE, locationListener);
+			locationListener = new SpeedAndBearingGPSLocationListener();
+
+			locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
+					MIN_WAIT_TIME, MIN_WAIT_DISTANCE, locationListener);
+			
+		}else if(intent.getExtras().getString(LOCATION_TYPE_REQUEST).equals(SIMPLE_GPS_LOCATION_TYPE)){
+			Log.d(MainSettingsActivity.LOG_TAG_LOCATION,
+					"Getting location with simple gps coordinates");
+
+
+			locationManager = (LocationManager) this
+					.getSystemService(Context.LOCATION_SERVICE);
+
+			locationListener = new SimpleGPSLocationListener();
+
+			locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
+					MIN_WAIT_TIME, MIN_WAIT_DISTANCE, locationListener);
+		}
+
 		return super.onStartCommand(intent, flags, startId);
 	}
 
@@ -78,34 +105,38 @@ public class SpeedAndBearingLoactionService extends Service {
 	}
 
 	/**
-	 * Sends out a broadcast with the location, or null of no speed and bearing
-	 * loc was found
+	 * Sends out a broadcast with the location
 	 * 
 	 * @param loc
 	 *            The location info to upload
 	 */
-	private void broadcastLocation(Location loc) {
+	private void broadcastLocation(Location loc, String locationActionString) {
 
-		// Stop getting updates
-		locationManager.removeUpdates(locationListener);
+		
 		Intent intent = new Intent();
 		Bundle b = new Bundle();
-		if (loc != null) {
-			// send loc to next service
-			b.putSerializable(SpeedAndBearingLoactionService.LOCATION_KEY,
-					new SerializableLocation(loc));
 
-		} else {
-			// send null to next service to indicate failure
-			b.putSerializable(SpeedAndBearingLoactionService.LOCATION_KEY, null);
-		}
+		// package up location
+		b.putSerializable(GetLocationService.LOCATION_KEY,
+				new SerializableLocation(loc));
+
 		intent.putExtras(b);
-		intent.setAction(SpeedAndBearingLoactionService.SPEED_AND_BEARING_LOCATION_OBTAINED_ACTION);
+		intent.setAction(locationActionString);
 		sendBroadcast(intent);
 
 		// calls destroy
 		stopSelf();
 
+	}
+	
+	public void broadcastServiceFailed(
+			String locationActionString) {
+		Intent intent = new Intent();
+		intent.setAction(locationActionString);
+		sendBroadcast(intent);
+
+		// calls destroy
+		stopSelf();
 	}
 
 	@Override
@@ -116,10 +147,14 @@ public class SpeedAndBearingLoactionService extends Service {
 		super.onDestroy();
 	}
 
-	/**
-	 * This class receives gps updates
-	 */
-	public class GpsListener implements LocationListener {
+
+	public class SpeedAndBearingGPSLocationListener implements LocationListener {
+
+		public static final String LOCATION_OBTAINED_WITH_SPEED_AND_BEARING_ACTION = 
+				"edu.cmd.radar.android.location.LOCATION_OBTAINED_WITH_SPEED_AND_BEARING_ACTION";
+		
+		public static final String FAILED_TO_OBTAIN_WITH_SPEED_AND_BEARING_ACTION =
+				"edu.cmd.radar.android.location.FAILED_TO_OBTAIN_WITH_SPEED_AND_BEARING_ACTION";
 
 		private double numOfSpeeds = 0;
 		private double speedTotal = 0;
@@ -160,9 +195,10 @@ public class SpeedAndBearingLoactionService extends Service {
 			// Once bearing and speed info is received, send off the location
 			// info, and shut down this service
 			if (firstLocation.hasSpeed() && firstLocation.hasBearing()) {
+				locationManager.removeUpdates(locationListener);
 				Log.d(MainSettingsActivity.LOG_TAG_LOCATION,
 						"fix has speed and bearing, done");
-				broadcastLocation(firstLocation);
+				broadcastLocation(firstLocation, LOCATION_OBTAINED_WITH_SPEED_AND_BEARING_ACTION);
 
 			}
 
@@ -170,16 +206,18 @@ public class SpeedAndBearingLoactionService extends Service {
 			// MAX_TIME_FOR_SPEED_AND_BEARING seconds, then just send all info
 			// received
 			if (SystemClock.uptimeMillis() - serviceStartTime > MAX_TIME_FOR_SPEED_AND_BEARING) {
+				locationManager.removeUpdates(locationListener);
 				Log.d(MainSettingsActivity.LOG_TAG_LOCATION,
 						"Time ran out to get speed and bearing, sending back null ");
-				broadcastLocation(null);
+				broadcastServiceFailed(FAILED_TO_OBTAIN_WITH_SPEED_AND_BEARING_ACTION);
 			}
 
 		}
 
 		@Override
 		public void onProviderDisabled(String provider) {
-			// TODO Auto-generated method stub
+			locationManager.removeUpdates(locationListener);
+			broadcastServiceFailed(FAILED_TO_OBTAIN_WITH_SPEED_AND_BEARING_ACTION);
 
 		}
 
@@ -196,5 +234,44 @@ public class SpeedAndBearingLoactionService extends Service {
 		}
 
 	}
+
+	public class SimpleGPSLocationListener implements LocationListener {
+
+		public static final String SIMPLE_GPS_LOCATION_OBTAINED_ACTION = 
+				"edu.cmd.radar.android.report.SIMPLE_GPS_LOCATION_OBTAINED";
+		public static final String FAILED_TO_OBTAIN_SIMPLE_GPS_LOCATION_ACTION = 
+				"edu.cmd.radar.android.report.FAILED_TO_OBTAIN_SIMPLE_GPS_LOCATION_ACTION";
+		
+		@Override
+		public void onLocationChanged(Location location) {
+			Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT, "Location Changed");
+			locationManager.removeUpdates(locationListener);
+			broadcastLocation(location, SIMPLE_GPS_LOCATION_OBTAINED_ACTION);
+			
+
+		}
+
+		@Override
+		public void onProviderDisabled(String provider) {
+			locationManager.removeUpdates(locationListener);
+			broadcastServiceFailed(FAILED_TO_OBTAIN_SIMPLE_GPS_LOCATION_ACTION);
+
+		}
+
+		@Override
+		public void onProviderEnabled(String provider) {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void onStatusChanged(String provider, int status, Bundle extras) {
+			// TODO Auto-generated method stub
+
+		}
+
+	}
+
+
 
 }

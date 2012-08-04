@@ -1,5 +1,14 @@
 package edu.cmd.radar.android.check;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OptionalDataException;
+import java.io.Serializable;
+import java.io.StreamCorruptedException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -15,9 +24,9 @@ import android.location.Location;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
+import edu.cmd.radar.android.location.GetLocationService;
+import edu.cmd.radar.android.location.LocationRequestReceiver;
 import edu.cmd.radar.android.location.SerializableLocation;
-import edu.cmd.radar.android.location.SimpleLocationService;
-import edu.cmd.radar.android.location.SpeedAndBearingLoactionService;
 import edu.cmd.radar.android.ui.MainSettingsActivity;
 
 /**
@@ -32,7 +41,7 @@ import edu.cmd.radar.android.ui.MainSettingsActivity;
  * @author satshabad
  * 
  */
-public class TrapCheckWakeUpService extends Service {
+public class TrapMonitorService extends Service {
 
 	/**
 	 * The key to get the last known location from an intent
@@ -46,32 +55,9 @@ public class TrapCheckWakeUpService extends Service {
 	public static final float RATIO_OF_DISTANCE_TO_WAIT = 0.666f;
 
 	/**
-	 * A broadcast receiver that gets an intent holding a simple location (lat,
-	 * long) fix
-	 */
-	protected BroadcastReceiver simpleLocationReceiver;
-
-	/**
-	 * A broadcast receiver that gets an intent holding info about the nearby
-	 * traps and the users location
-	 */
-	protected BroadcastReceiver serverInfoReceiver;
-
-	/**
-	 * An object to hold a list of nearby traps
-	 */
-	private TrapLocations trapLocations;
-
-	/**
-	 * The last known location of the user, not including the most recently
-	 * obtained one from the current cycle
-	 */
-	private SerializableLocation lastKnownLocation;
-
-	/**
 	 * The key to get the trapLocations from an intent
 	 */
-	public static final String TRAP_LOCATIONS_INFO_KEY = "TRAP_LOCATIONS_INFO_KEY";
+	public static final String TRAP_LOCATION_INFO_KEY = "TRAP_LOCATION_INFO_KEY";
 
 	/**
 	 * The max distance to be from the furthest away trap before getting enw
@@ -85,168 +71,109 @@ public class TrapCheckWakeUpService extends Service {
 	 */
 	private static final double PAST_POINT_VALID_BEARING_RANGE = 120;
 
+	private static final String TRAP_CALCULATIONS_FAILED_ACTION = "TRAP_CALCULATIONS_FAILED_ACTION";
+
+	private static final String TRAP_INFO_OUT_OF_DATE_ACTION = "edu.cmd.radar.android.check.TRAP_INFO_OUT_OF_DATE_ACTION";
+
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
-				"TrapCheckWakeUpService starting");
-		Bundle extras = (Bundle) intent.getExtras();
+				"TrapMonitorService starting");
 
-		if (extras == null) {
-			Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
-					"There is no prior info on any traps");
-			startServiceToGetTrapInfo();
-		} else {
+		// Get the trap info and last known location from files
 
-			// trapLocations was passed here from the last time this service
-			// went to sleep
-			trapLocations = (TrapLocations) intent.getExtras().getSerializable(
-					TRAP_LOCATIONS_INFO_KEY);
+		TrapLocations trapLocations = null;
+		SerializableLocation lastKnownLocation = null;
+		try {
+			FileInputStream fis = this
+					.openFileInput(GetTrapsService.TRAP_LOCATIONS_FILE_NAME);
+			ObjectInputStream is = new ObjectInputStream(fis);
+			trapLocations = (TrapLocations) is.readObject();
+			is.close();
 
 			Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 					"\t\t\tThere is prior info on some traps\n"
 							+ trapLocations.toString());
-			// This is the location obtained from the last time this service was
-			// active
-			lastKnownLocation = (SerializableLocation) intent.getExtras()
-					.getSerializable(LAST_LOCATION_KEY);
+
+			FileInputStream fis2 = this
+					.openFileInput(GetTrapsService.LAST_KNOWN_LOCATION_FILE_NAME);
+			ObjectInputStream is2 = new ObjectInputStream(fis2);
+			lastKnownLocation = (SerializableLocation) is.readObject();
+			is2.close();
 
 			Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 					"\t\t\tThe last known location is:\n" + lastKnownLocation);
 
-			IntentFilter filter = new IntentFilter();
-			filter.addAction(SimpleLocationService.SIMPLE_LOCATION_OBTAINED_ACTION);
-
-			simpleLocationReceiver = new BroadcastReceiver() {
-				@Override
-				public void onReceive(Context context, Intent i) {
-					unregisterReceiver(simpleLocationReceiver);
-
-					SerializableLocation currentLocation = (SerializableLocation) i
-							.getExtras().getSerializable(
-									SimpleLocationService.LOCATION_KEY);
-
-					Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
-							"Received location from SimpleLocationSevice broadcast in TrapCheckWakeUpService."
-									+ "\t\t\tSetting current location to: \n"
-									+ currentLocation);
-
-					locationRecieved(currentLocation);
-
-				}
-
-			};
-
-			// Get a new simple location fix so that new distances can be
-			// calculated, alarms can be set, etc.
-			registerReceiver(simpleLocationReceiver, filter);
-			Intent i = new Intent(this, SimpleLocationService.class);
-			Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
-					"Starting SimpleLocationSevice to get a fix for TrapCheckWakeUpService to update distance from traps");
-			startService(i);
+		} catch (StreamCorruptedException e) {
+			serviceFailed();
+			e.printStackTrace();
+		} catch (OptionalDataException e) {
+			serviceFailed();
+			e.printStackTrace();
+		} catch (FileNotFoundException e) {
+			serviceFailed();
+			e.printStackTrace();
+		} catch (IOException e) {
+			serviceFailed();
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			serviceFailed();
+			e.printStackTrace();
 		}
 
-		return START_REDELIVER_INTENT;
-	}
-
-	/**
-	 * This method is called when the {@link #trapLocations} info is out of date
-	 * and needs to be updated. This method registers a receiver to get the info
-	 * once it is obtained from the server by another service. This also gets
-	 * the uers current location with speed and bearing. Once done it always
-	 * calls {@link #locationRecieved(SerializableLocation)}.
-	 * 
-	 * OR if it receives a nul loc or tracplocations, it stops this service
-	 */
-	private void startServiceToGetTrapInfo() {
-
-		IntentFilter filter = new IntentFilter();
-		filter.addAction(TrapCheckServerPullService.TRAP_INFO_OBTAINED_ACTION);
-
-		serverInfoReceiver = new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent i) {
-				unregisterReceiver(serverInfoReceiver);
-
-				trapLocations = (TrapLocations) i.getExtras().getSerializable(
-						TrapCheckServerPullService.NEW_TRAP_LOCATION_INFO_KEY);
-
-				// if we can't get any location or trapinfo, then just stop.
-				if (trapLocations == null) {
-					stopSelf();
-					return;
-				}
-
-				SerializableLocation currentLocation = (SerializableLocation) i
-						.getExtras().getSerializable(
-								SpeedAndBearingLoactionService.LOCATION_KEY);
-
-				Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
-						"Got info from TrapCheckServerPullService broadcast in TrapCheckWakeUpService\n"
-								+ "\t\t\tCurrent Location is set to:\n"
-								+ currentLocation
-								+ "\t\t\ttrapLocations is: \n" + trapLocations);
-				if (lastKnownLocation == null) {
-					lastKnownLocation = currentLocation;
-				}
-				locationRecieved(currentLocation);
-
-			}
-
-		};
-		registerReceiver(serverInfoReceiver, filter);
-		Intent i = new Intent(this, TrapCheckServerPullService.class);
-		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
-				"Starting TrapCheckServerPullService to get trapinfo and location from TrapCheckWakeUpService");
-		startService(i);
-	}
-
-	/**
-	 * This method is called only once the users current location is found. That
-	 * current location is then passed to this method. The main logic of this
-	 * class is executed in this method. This method may decide that the trap
-	 * info is not current enough and call {@link #startServiceToGetTrapInfo()}
-	 * and then return once the receiver is registered.
-	 * 
-	 * @param currentLocation
-	 *            The users current location
-	 */
-	protected void locationRecieved(SerializableLocation currentLocation) {
+		SerializableLocation currentLocation = (SerializableLocation) intent
+				.getExtras().getSerializable(GetLocationService.LOCATION_KEY);
+		
+		// This means that the most current location was not passed here.
+		// Probably because the info is fresh
+		if(currentLocation == null){
+			currentLocation = lastKnownLocation;
+		}
 
 		// remove any traps that are not in our current direction of travel
 		// (within some threshold)
-		removePastTraps(currentLocation);
+		removePastTraps(currentLocation, lastKnownLocation, trapLocations);
 
 		// calculate the distance to each speed trap and store that in the
 		// trapLocations object
-		setUpdatedDistances(currentLocation);
+		setUpdatedDistances(currentLocation, lastKnownLocation, trapLocations);
 
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 				"\t\t\tAfter distance calc, trapLocations: \n" + trapLocations);
 
 		// Check to that the traps in trapLocations are current. If not, get new
 		// ones.
-		if (infoOutOfDate(currentLocation)) {
+		if (infoIsOutOfDate(currentLocation, lastKnownLocation, trapLocations)) {
 			Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 					"Info is out of date, get the info from the server");
 
-			// get new info from server and location with speed and bearing
-			startServiceToGetTrapInfo();
-			return;
+			Intent broadcastIntent = new Intent();
+			Bundle b = new Bundle();
+			b.putString(GetLocationService.LOCATION_TYPE_REQUEST, GetLocationService.SPEED_AND_BEARING_LOCATION_TYPE);
+			broadcastIntent.putExtras(b);
+			broadcastIntent.setAction(LocationRequestReceiver.GET_LOCATION_ACTION);
+			sendBroadcast(broadcastIntent);
+
+			stopSelf();
 		}
+
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Info is still valid");
 
 		// Pick the closest target within alert range and set and alert to tell
 		// the user that the trap is approaching soon
-		setAlertForClosestTarget(currentLocation);
+		setAlertForClosestTarget(currentLocation, lastKnownLocation, trapLocations);
 
+		
 		// Find out how long this service should sleep and set the alarm for
 		// that many milliseconds
-		long timeToSleep = getTimeToSleep(currentLocation);
-		setAlarm(timeToSleep, currentLocation);
+		long timeToSleep = getTimeToSleep(currentLocation, trapLocations, lastKnownLocation);
+		setAlarm(timeToSleep, currentLocation, trapLocations);
 
 		stopSelf();
-
+		
+		return START_REDELIVER_INTENT;
 	}
+
 
 	/**
 	 * This is called to modify the field {@link #trapLocations} based on the
@@ -257,13 +184,16 @@ public class TrapCheckWakeUpService extends Service {
 	 * 
 	 * @param currentLocation
 	 *            the user's current location
+	 * @param trapLocations
+	 * @param lastKnownLocation
 	 */
-	private void removePastTraps(SerializableLocation currentLocation) {
+	private void removePastTraps(SerializableLocation currentLocation,
+			SerializableLocation lastKnownLocation, TrapLocations trapLocations) {
 
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 				"Removing traps that are out of range");
 
-		float currentBearing = getCurrentBearing(currentLocation);
+		float currentBearing = getCurrentBearing(currentLocation, lastKnownLocation);
 
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Current Bearing is: "
 				+ currentBearing + " degrees east of north");
@@ -308,8 +238,11 @@ public class TrapCheckWakeUpService extends Service {
 	 * 
 	 * @param currentLocation
 	 *            user's current location
+	 * @param trapLocations
+	 * @param lastKnownLocation
 	 */
-	private void setUpdatedDistances(SerializableLocation currentLocation) {
+	private void setUpdatedDistances(SerializableLocation currentLocation,
+			SerializableLocation lastKnownLocation, TrapLocations trapLocations) {
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 				"Recalculating distances to points");
 		for (SerializableLocation loc : trapLocations.getLocations()) {
@@ -335,9 +268,12 @@ public class TrapCheckWakeUpService extends Service {
 	 * 
 	 * @param currentLocation
 	 *            the users current location
+	 * @param trapLocations
+	 * @param lastKnownLocation
 	 * @return true if info is out of date, false if it's still valid
 	 */
-	private boolean infoOutOfDate(SerializableLocation currentLocation) {
+	private boolean infoIsOutOfDate(SerializableLocation currentLocation,
+			SerializableLocation lastKnownLocation, TrapLocations trapLocations) {
 
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 				"Checking to see if info is out of date");
@@ -388,7 +324,7 @@ public class TrapCheckWakeUpService extends Service {
 				.getValidBearingRange()) % 360);
 		float lowerBearingBound = (float) ((origin.getBearing() - .5 * trapLocations
 				.getValidBearingRange()) % 360);
-		float currentBearing = getCurrentBearing(currentLocation);
+		float currentBearing = getCurrentBearing(currentLocation, lastKnownLocation);
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "currentBearing: "
 				+ currentBearing);
 		if (!(currentBearing > lowerBearingBound && currentBearing < upperBearingBound)) {
@@ -403,7 +339,7 @@ public class TrapCheckWakeUpService extends Service {
 		return false;
 	}
 
-	private void setAlertForClosestTarget(SerializableLocation currentLocation) {
+	private void setAlertForClosestTarget(SerializableLocation currentLocation, SerializableLocation lastKnownLocation, TrapLocations trapLocations) {
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 				"Setting alarm for closest target");
 		// SerializableLocation closestLoc =
@@ -447,9 +383,10 @@ public class TrapCheckWakeUpService extends Service {
 	 * 
 	 * @param currentLocation
 	 *            the users current location
+	 * @param lastKnownLocation 
 	 * @return bearing in degrees east of north
 	 */
-	private float getCurrentBearing(SerializableLocation currentLocation) {
+	private float getCurrentBearing(SerializableLocation currentLocation, SerializableLocation lastKnownLocation) {
 
 		if (currentLocation.hasBearing()) {
 			return currentLocation.getBearing();
@@ -477,7 +414,7 @@ public class TrapCheckWakeUpService extends Service {
 	 * @return degrees east of north
 	 */
 	private float getBearingBetweenTwoLocations(
-			SerializableLocation endLocation, SerializableLocation startLocation) {
+			SerializableLocation endLocation, SerializableLocation startLocation) {		
 
 		// results will be stored in float array
 		float[] result1 = new float[1];
@@ -550,22 +487,41 @@ public class TrapCheckWakeUpService extends Service {
 	 *            millis to sleep
 	 * @param currentLocation
 	 *            location to send self
+	 * @param trapLocations 
 	 */
-	private void setAlarm(long timeToSleep, SerializableLocation currentLocation) {
-		Intent intentForNextFix = new Intent(TrapCheckReceiver.class.getName());
+	private void setAlarm(long timeToSleep, SerializableLocation currentLocation, TrapLocations trapLocations) {
+		Intent intentForNextFix = new Intent(GetLocationService.class.getName());
 
 		intentForNextFix
-				.setAction(TrapCheckReceiver.CHECK_DISTANCE_FROM_TRAPS_ACTION);
+				.setAction(LocationRequestReceiver.GET_LOCATION_ACTION);
 
 		Bundle extraBundle = new Bundle();
-
-		extraBundle.putSerializable(TrapCheckWakeUpService.LAST_LOCATION_KEY,
-				currentLocation);
-
-		extraBundle.putSerializable(TRAP_LOCATIONS_INFO_KEY, trapLocations);
+		
+		extraBundle.putString(GetLocationService.LOCATION_TYPE_REQUEST, GetLocationService.SIMPLE_GPS_LOCATION_TYPE);
 
 		PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0,
 				intentForNextFix, 0);
+		
+		try {
+			FileOutputStream fos = this.openFileOutput(GetTrapsService.TRAP_LOCATIONS_FILE_NAME, Context.MODE_PRIVATE);
+			ObjectOutputStream os = new ObjectOutputStream(fos);
+			os.writeObject(trapLocations);
+			
+			os.close();
+			
+			FileOutputStream fos2 = this.openFileOutput(GetTrapsService.LAST_KNOWN_LOCATION_FILE_NAME, Context.MODE_PRIVATE);
+			ObjectOutputStream os2 = new ObjectOutputStream(fos2);
+			os2.writeObject(currentLocation);
+			
+			os2.close();
+			
+		} catch (FileNotFoundException e) {
+			serviceFailed();
+			e.printStackTrace();
+		} catch (IOException e) {
+			serviceFailed();
+			e.printStackTrace();
+		}
 
 		// Set the broadcast alarm for a specified time and stop the service
 		AlarmManager alarmManager = (AlarmManager) getSystemService(Service.ALARM_SERVICE);
@@ -580,12 +536,14 @@ public class TrapCheckWakeUpService extends Service {
 	 * 
 	 * @param currentLocation
 	 *            the current location
+	 * @param trapLocations 
+	 * @param lastKnownLocation 
 	 * @return the number of millis to sleep
 	 */
-	private long getTimeToSleep(SerializableLocation currentLocation) {
+	private long getTimeToSleep(SerializableLocation currentLocation, TrapLocations trapLocations, SerializableLocation lastKnownLocation) {
 		Collection<Float> distances = trapLocations.getDistanceCollection();
 		Float dis = Collections.min(distances);
-		Float speed = getCurrentSpeed(currentLocation);
+		Float speed = getCurrentSpeed(currentLocation, lastKnownLocation);
 
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "Closest Trap is "
 				+ dis + " meters away\n " + "Current speed is : " + speed
@@ -603,9 +561,10 @@ public class TrapCheckWakeUpService extends Service {
 	 * 
 	 * @param currentLocation
 	 *            the users current location
+	 * @param lastKnownLocation 
 	 * @return speed in meters per second
 	 */
-	private Float getCurrentSpeed(SerializableLocation currentLocation) {
+	private Float getCurrentSpeed(SerializableLocation currentLocation, SerializableLocation lastKnownLocation) {
 
 		if (currentLocation.getSpeed() != 0.0f) {
 			return currentLocation.getSpeed();
@@ -631,6 +590,18 @@ public class TrapCheckWakeUpService extends Service {
 
 	}
 
+	/**
+	 * If anything goes wrong, send out a broadcast that says so.
+	 */
+	public void serviceFailed() {
+		Intent intent = new Intent();
+		intent.setAction(TRAP_CALCULATIONS_FAILED_ACTION);
+		sendBroadcast(intent);
+
+		// calls destroy
+		stopSelf();
+	}
+
 	@Override
 	public IBinder onBind(Intent intent) {
 		// TODO Auto-generated method stub
@@ -639,12 +610,6 @@ public class TrapCheckWakeUpService extends Service {
 
 	@Override
 	public void onDestroy() {
-		try {
-			unregisterReceiver(serverInfoReceiver);
-			unregisterReceiver(simpleLocationReceiver);
-		} catch (Exception e) {
-			// TODO: handle exception
-		}
 		super.onDestroy();
 	}
 }
