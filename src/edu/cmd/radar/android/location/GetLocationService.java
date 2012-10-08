@@ -44,6 +44,11 @@ public class GetLocationService extends Service {
 
 	public static final String SIMPLE_GPS_LOCATION_TYPE = "SIMPLE_GPS_LOCATION_TYPE";
 
+	public static final String LOCATION_SERVICE_IS_NOW_FREE_ACTION = "edu.cmd.radar.android.location.LOCATION_SERVICE_IS_NOW_FREE_ACTION";
+	
+
+	public static boolean isBusy = false;
+
 	/**
 	 * The location object to send to the server
 	 */
@@ -61,12 +66,19 @@ public class GetLocationService extends Service {
 	 * MAX_TIME_FOR_SPEED_AND_BEARING
 	 */
 	private long serviceStartTime = 0;
+	
+	private Class<?> targetForLocation;
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		
+		GetLocationService.isBusy = true;
+		
+		
 		Log.d(MainSettingsActivity.LOG_TAG_LOCATION,
 				"GetLocationService Started");
+		
+		targetForLocation = (Class<?>) intent.getExtras().getSerializable("CLASS_TO_SEND_BACK_TO");
 	
 		if(intent.getExtras().getString(LOCATION_TYPE_REQUEST).equals(SPEED_AND_BEARING_LOCATION_TYPE)){
 			Log.d(MainSettingsActivity.LOG_TAG_LOCATION,
@@ -110,10 +122,10 @@ public class GetLocationService extends Service {
 	 * @param loc
 	 *            The location info to upload
 	 */
-	private void broadcastLocation(Location loc, String locationActionString) {
+	private void sendBackLocation(Location loc) {
 
 		
-		Intent intent = new Intent();
+		Intent intent = new Intent(this, targetForLocation);
 		Bundle b = new Bundle();
 
 		// package up location
@@ -121,9 +133,9 @@ public class GetLocationService extends Service {
 				new SerializableLocation(loc));
 
 		intent.putExtras(b);
-		intent.setAction(locationActionString);
-		sendBroadcast(intent);
-
+		
+		startService(intent);
+		
 		// calls destroy
 		stopSelf();
 
@@ -141,8 +153,14 @@ public class GetLocationService extends Service {
 
 	@Override
 	public void onDestroy() {
+		
+		GetLocationService.isBusy = false;
+		
+		Intent intent = new Intent();
+		intent.setAction(LOCATION_SERVICE_IS_NOW_FREE_ACTION);
+		sendBroadcast(intent);
 
-		// release recourses
+		// release resources
 		locationManager.removeUpdates(locationListener);
 		super.onDestroy();
 	}
@@ -150,9 +168,6 @@ public class GetLocationService extends Service {
 
 	public class SpeedAndBearingGPSLocationListener implements LocationListener {
 
-		public static final String LOCATION_OBTAINED_WITH_SPEED_AND_BEARING_ACTION = 
-				"edu.cmd.radar.android.location.LOCATION_OBTAINED_WITH_SPEED_AND_BEARING_ACTION";
-		
 		public static final String FAILED_TO_OBTAIN_WITH_SPEED_AND_BEARING_ACTION =
 				"edu.cmd.radar.android.location.FAILED_TO_OBTAIN_WITH_SPEED_AND_BEARING_ACTION";
 
@@ -198,7 +213,7 @@ public class GetLocationService extends Service {
 				locationManager.removeUpdates(locationListener);
 				Log.d(MainSettingsActivity.LOG_TAG_LOCATION,
 						"fix has speed and bearing, done");
-				broadcastLocation(firstLocation, LOCATION_OBTAINED_WITH_SPEED_AND_BEARING_ACTION);
+				sendBackLocation(firstLocation);
 
 			}
 
@@ -237,8 +252,6 @@ public class GetLocationService extends Service {
 
 	public class SimpleGPSLocationListener implements LocationListener {
 
-		public static final String SIMPLE_GPS_LOCATION_OBTAINED_ACTION = 
-				"edu.cmd.radar.android.report.SIMPLE_GPS_LOCATION_OBTAINED";
 		public static final String FAILED_TO_OBTAIN_SIMPLE_GPS_LOCATION_ACTION = 
 				"edu.cmd.radar.android.report.FAILED_TO_OBTAIN_SIMPLE_GPS_LOCATION_ACTION";
 		
@@ -246,7 +259,7 @@ public class GetLocationService extends Service {
 		public void onLocationChanged(Location location) {
 			Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT, "Location Changed");
 			locationManager.removeUpdates(locationListener);
-			broadcastLocation(location, SIMPLE_GPS_LOCATION_OBTAINED_ACTION);
+			sendBackLocation(location);
 			
 
 		}

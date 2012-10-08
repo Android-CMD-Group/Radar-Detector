@@ -49,27 +49,18 @@ public class ShakeListenerService extends Service implements Shaker.Callback {
 	 */
 	public void shakingStarted() {
 		
-		// always vibrate, even of the service is already running
 		vib.vibrate(700);
 		Log.d(MainSettingsActivity.LOG_TAG_SHAKE_LISTENER, "Shaking started.");
+			
+		// Get the location and send it to the server
+		Intent i = new Intent(this, TrapReportService.class);
+		Bundle b = new Bundle();
 		
-		// no support for simultaneous reporting
-		if (!TrapReportService.isRunning) {
-			Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT, "Grabbing location");
-			
-			// Get the location and send it to the server
-			Intent i = new Intent(this, TrapReportService.class);
-			Bundle b = new Bundle();
-			
-			// due to gps startup time, send the server the actual report time so it can calculate the actual location.
-			b.putLong(TIME_REPORTED_PREF_KEY, System.currentTimeMillis());
-			i.putExtras(b);
-			startService(i);
-		}else{
-			Log.d(MainSettingsActivity.LOG_TAG_TRAP_REPORT, "Already grabbing location");
-			Toast.makeText(this, "Already grabbing location", Toast.LENGTH_LONG).show();
-		}
-
+		// due to gps startup time, send the server the actual report time so it can calculate the actual location.
+		b.putLong(TIME_REPORTED_PREF_KEY, System.currentTimeMillis());
+		i.putExtras(b);
+		startService(i);
+		
 	}
 
 	/**

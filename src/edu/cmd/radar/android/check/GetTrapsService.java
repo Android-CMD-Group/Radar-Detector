@@ -1,9 +1,11 @@
 package edu.cmd.radar.android.check;
 
+import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.ObjectOutputStream;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
@@ -18,6 +20,9 @@ import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -31,8 +36,8 @@ import android.util.Log;
 
 import com.google.gson.stream.JsonWriter;
 
-import edu.cmd.radar.android.location.SerializableLocation;
 import edu.cmd.radar.android.location.GetLocationService;
+import edu.cmd.radar.android.location.SerializableLocation;
 import edu.cmd.radar.android.ui.MainSettingsActivity;
 
 /**
@@ -45,22 +50,14 @@ import edu.cmd.radar.android.ui.MainSettingsActivity;
 public class GetTrapsService extends Service {
 
 	/**
-	 * The "provider" of the locations gotten from the server
+	 * The URI of the server serviceContext gives the trap info
 	 */
-	private static final String SERVER_PROVIDER = "server";
+	private static final String TRAP_CHECK_URI = "http://ec2-54-245-44-240.us-west-2.compute.amazonaws.com/gettraps";
+	//private static final String TRAP_CHECK_URI = "http://192.168.1.4:800/test";
+	
 
 	/**
-	 * The URI of the server that gives the trap info
-	 */
-	private static final String TRAP_CHECK_URI = "http://192.168.1.3:1188/Radar_Server/check";
-
-	/**
-	 * Filter used to broadcast that this service has gotten info
-	 */
-	public static final String TRAP_INFO_OBTAINED_ACTION = "edu.cmd.radar.android.check.TRAP_INFO_OBTAINED";
-
-	/**
-	 * Filter used to broadcast that this service has gotten info
+	 * Filter used to broadcast serviceContext this service has failed to get info
 	 */
 	public static final String OBTAINING_TRAP_INFO_FAILED_ACTION = "edu.cmd.radar.android.check.OBTAINING_TRAP_INFO_FAILED_ACTION";
 
@@ -73,29 +70,90 @@ public class GetTrapsService extends Service {
 
 	public static final String LAST_KNOWN_LOCATION_FILE_NAME = "LAST_KNOWN_LOCATION_FILE_NAME";
 
+	private BroadcastReceiver receiver;
+	
+	private Context serviceContext = this;
+
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 				"TrapCheckPullService is started");
+		
+		
+		if (intent.getExtras().getSerializable(GetLocationService.LOCATION_KEY) == null){
+			
+			if(GetLocationService.isBusy == false){
+				
+				Intent i = new Intent(this, GetLocationService.class);
+				Bundle extras = new Bundle();
+				extras.putString(GetLocationService.LOCATION_TYPE_REQUEST,
+						GetLocationService.SIMPLE_GPS_LOCATION_TYPE);
+				extras.putSerializable("CLASS_TO_SEND_BACK_TO",
+						GetTrapsService.class);
+				i.putExtras(extras);
+				startService(i);
+				stopSelf();
+				
+			}else{
+				
+				IntentFilter filter = new IntentFilter();
+				filter.addAction(GetLocationService.LOCATION_SERVICE_IS_NOW_FREE_ACTION);
 
-		locationRecieved(intent);
+				receiver = new BroadcastReceiver() {
+					@Override
+					public void onReceive(Context context, Intent intent) {
+						
+						if (GetLocationService.isBusy == false) {
+	
+							unregisterReceiver(receiver);
+							Intent i = new Intent(serviceContext, GetLocationService.class);
+							Bundle extras = new Bundle();
+							extras.putString(
+									GetLocationService.LOCATION_TYPE_REQUEST,
+									GetLocationService.SIMPLE_GPS_LOCATION_TYPE);
+							extras.putSerializable("CLASS_TO_SEND_BACK_TO",
+									GetTrapsService.class);
+							i.putExtras(extras);
+							startService(i);
+							stopSelf();
+						}
+
+					}
+				};
+				
+				registerReceiver(receiver, filter);
+
+			}
+			
+			
+		}else{
+			sendLocationToServer((SerializableLocation) intent.getExtras().getSerializable(GetLocationService.LOCATION_KEY));
+		}
+
+
 
 		return START_REDELIVER_INTENT;
+	}
+	
+	@Override
+	public void onDestroy() {
+		try{
+			unregisterReceiver(receiver);
+		}catch (Exception e) {
+			// TODO: handle exception
+		}
+		super.onDestroy();
 	}
 
 	/**
 	 * This method is called only when a location fix has been received. it
 	 * executes the main logic of the service, getting info from the server and
-	 * writes it to a file. Then it sends a broadcast indicating that the file is ready to be read.
+	 * writes it to a file. Then it send an intent to TrapMonitorService
 	 * 
 	 * @param i
 	 */
-	protected void locationRecieved(Intent i) {
-
-		SerializableLocation currentLocation = (SerializableLocation) i
-				.getExtras().getSerializable(
-						GetLocationService.LOCATION_KEY);
+	protected void sendLocationToServer(SerializableLocation currentLocation) {
 
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "\t\t\tlocation is:\n"
 				+ currentLocation.toString());
@@ -111,19 +169,33 @@ public class GetTrapsService extends Service {
 		// Upload the given info to the server and get the JSON response.
 
 		InputStream jsonStream = getTrapLocationsFromServer(toSend);
+		
+		BufferedReader br = new BufferedReader(new InputStreamReader(jsonStream));
+
+		StringBuilder sb = new StringBuilder();
+
+		String line;
+		try {
+			while ((line = br.readLine()) != null) {
+				sb.append(line);
+			}
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 				"got raw info from server");
 
-		// take that JSON response and turn it into a TrapLocations object
+		// take serviceContext JSON response and turn it into a TrapLocations object
 
-		TrapLocations trapLocations = streamToTrapLocation(jsonStream,
+		TrapLocations trapLocations = jsonStringToTrapLocation(sb.toString(),
 				currentLocation);
 
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 				"\t\t\tParesed info is\n" + trapLocations.toString());
 
-		// package the info up and send out a broadcast that this service is
+		// package the info up and send out a broadcast serviceContext this service is
 		// done. Then stop.
 
 
@@ -149,17 +221,21 @@ public class GetTrapsService extends Service {
 			e.printStackTrace();
 		}
 		
-		Intent intent = new Intent();
+		Intent intent = new Intent(this, TrapMonitorService.class);
 		
-		intent.setAction(TRAP_INFO_OBTAINED_ACTION);
-		sendBroadcast(intent);
+		intent.putExtras(new Bundle());
+		
+		intent.getExtras().putSerializable(GetLocationService.LOCATION_KEY, currentLocation);
+		
+		startService(intent);
+		
 
 		// calls destroy
 		stopSelf();
 	}
 
 	/**
-	 * If anything goes wrong, send out a broadcast that says so.
+	 * If anything goes wrong, send out a broadcast serviceContext says so.
 	 */
 	public void broadcastServiceFailed() {
 		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
@@ -209,6 +285,8 @@ public class GetTrapsService extends Service {
 			e.printStackTrace();
 		}
 		HttpEntity entity = response.getEntity();
+		
+		
 		try {
 			stream = entity.getContent();
 		} catch (IllegalStateException e) {
@@ -279,77 +357,52 @@ public class GetTrapsService extends Service {
 	/**
 	 * Turns stream of JSON info and the current location into a TrapInfo object
 	 * 
-	 * @param stream
+	 * @param jsonString
 	 *            JSON from server
 	 * @param currentLocation
 	 *            users loc
 	 * @return nearby trap location in an object called TrapLocations
 	 */
-	private TrapLocations streamToTrapLocation(InputStream stream,
+	private TrapLocations jsonStringToTrapLocation(String jsonString,
 			SerializableLocation currentLocation) {
-		JsonFactory jfactory = new JsonFactory();
+		
 		TrapLocations trapLocations = new TrapLocations();
-		/*** read from file ***/
+		
+		JSONObject allTraps = null;
 		try {
-			JsonParser jParser = jfactory.createJsonParser(stream);
-
-			while (jParser.nextToken() != JsonToken.END_OBJECT) {
-
-				String fieldname = jParser.getCurrentName();
-				if ("locations".equals(fieldname)) {
-
-					jParser.nextToken(); // current token is "[", move next
-
-					// array, loop until token equal to "]"
-					while (jParser.nextToken() != JsonToken.END_ARRAY) {
-
-						jParser.nextToken(); // current token is "[", move next
-						double lat = jParser.getDoubleValue();
-						jParser.nextToken();
-						double lon = jParser.getDoubleValue();
-						jParser.nextToken();
-						float speed = jParser.getFloatValue();
-						jParser.nextToken();
-						float accuracy = jParser.getFloatValue();
-						trapLocations.addLocation(lat, lon, accuracy, speed,
-								SERVER_PROVIDER);
-						jParser.nextToken();
-					}
-
-				}
-
-				if ("distanceRange".equals(fieldname)) {
-					jParser.nextToken();
-					trapLocations.setRangeOfPointsFromOrigin(jParser
-							.getFloatValue());
-				}
-
-				if ("bearingRange".equals(fieldname)) {
-					jParser.nextToken();
-					trapLocations.setValidBearingRange(jParser.getFloatValue());
-				}
-
+			allTraps = new JSONObject(jsonString);
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		JSONArray traps = null;
+		try {
+			traps = allTraps.getJSONArray("traps");
+		} catch (JSONException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+		try {
+			for(int i=0; i<(traps.length()); i++)
+			{
+			    JSONObject trap = traps.getJSONObject(i);
+			    
+			    JSONArray latLongArray = trap.getJSONArray("loc");
+			    
+			    trapLocations.addLocation(latLongArray.getDouble(0),latLongArray.getDouble(1), trap.getInt("accuracy"), trap.getInt("speed"), "server");
 			}
-			jParser.close();
-
-		} catch (JsonParseException e) {
-			broadcastServiceFailed();
-			e.printStackTrace();
-		} catch (IOException e) {
-			broadcastServiceFailed();
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
-		try {
-			stream.close();
-		} catch (IOException e) {
-			broadcastServiceFailed();
-			e.printStackTrace();
-		}
-
+		
 		trapLocations.setOriginalLocation(currentLocation);
 		trapLocations.setTimeStamp(System.currentTimeMillis());
-
+			
+		Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER, "From Server: "+ trapLocations.toString());
+		
 		return trapLocations;
 	}
 
@@ -363,8 +416,5 @@ public class GetTrapsService extends Service {
 		super.onCreate();
 	}
 
-	@Override
-	public void onDestroy() {
-		super.onDestroy();
-	}
+
 }

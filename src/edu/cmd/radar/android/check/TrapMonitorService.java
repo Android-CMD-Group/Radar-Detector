@@ -25,8 +25,8 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
 import edu.cmd.radar.android.location.GetLocationService;
-import edu.cmd.radar.android.location.LocationRequestReceiver;
 import edu.cmd.radar.android.location.SerializableLocation;
+import edu.cmd.radar.android.report.TrapReportService;
 import edu.cmd.radar.android.ui.MainSettingsActivity;
 
 /**
@@ -147,13 +147,8 @@ public class TrapMonitorService extends Service {
 			Log.d(MainSettingsActivity.LOG_TAG_TRAP_CHECKER,
 					"Info is out of date, get the info from the server");
 
-			Intent broadcastIntent = new Intent();
-			Bundle b = new Bundle();
-			b.putString(GetLocationService.LOCATION_TYPE_REQUEST, GetLocationService.SPEED_AND_BEARING_LOCATION_TYPE);
-			broadcastIntent.putExtras(b);
-			broadcastIntent.setAction(LocationRequestReceiver.GET_LOCATION_ACTION);
-			sendBroadcast(broadcastIntent);
-
+			Intent getTrapsIntent = new Intent(this, GetTrapsService.class);
+			startService(getTrapsIntent);
 			stopSelf();
 		}
 
@@ -167,7 +162,7 @@ public class TrapMonitorService extends Service {
 		// Find out how long this service should sleep and set the alarm for
 		// that many milliseconds
 		long timeToSleep = getTimeToSleep(currentLocation, trapLocations, lastKnownLocation);
-		setAlarm(timeToSleep, currentLocation, trapLocations);
+		setAlarmAndWriteLocationsToFile(timeToSleep, currentLocation, trapLocations);
 
 		stopSelf();
 		
@@ -489,15 +484,15 @@ public class TrapMonitorService extends Service {
 	 *            location to send self
 	 * @param trapLocations 
 	 */
-	private void setAlarm(long timeToSleep, SerializableLocation currentLocation, TrapLocations trapLocations) {
-		Intent intentForNextFix = new Intent(GetLocationService.class.getName());
-
-		intentForNextFix
-				.setAction(LocationRequestReceiver.GET_LOCATION_ACTION);
-
+	private void setAlarmAndWriteLocationsToFile(long timeToSleep, SerializableLocation currentLocation, TrapLocations trapLocations) {
+		Intent intentForNextFix = new Intent(this, GetLocationService.class);
+		
 		Bundle extraBundle = new Bundle();
 		
 		extraBundle.putString(GetLocationService.LOCATION_TYPE_REQUEST, GetLocationService.SIMPLE_GPS_LOCATION_TYPE);
+		
+		extraBundle.putSerializable("CLASS_TO_SEND_BACK_TO",
+				TrapMonitorService.class);
 
 		PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0,
 				intentForNextFix, 0);

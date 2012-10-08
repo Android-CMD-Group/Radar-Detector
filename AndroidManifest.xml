@@ -51,26 +51,6 @@
                 </action>
             </intent-filter>
         </receiver>
-        <receiver android:name=".check.TrapMonitorReceiver" >
-            <intent-filter>
-                <action android:name="edu.cmd.radar.android.check.TRAP_INFO_OBTAINED" >
-                </action>
-                <action android:name="edu.cmd.radar.android.report.SIMPLE_GPS_LOCATION_OBTAINED" >
-                </action>
-            </intent-filter>
-        </receiver>
-        <receiver android:name=".check.GetTrapsReceiver" >
-            <intent-filter>
-                <action android:name="edu.cmd.radar.android.location.LOCATION_OBTAINED_WITH_SPEED_AND_BEARING_ACTION" >
-                </action>
-            </intent-filter>
-        </receiver>
-        <receiver android:name=".location.LocationRequestReceiver" >
-            <intent-filter>
-                <action android:name="edu.cmd.radar.android.location.GET_LOCATION_ACTION" >
-                </action>
-            </intent-filter>
-        </receiver>
     </application>
 
 </manifest>
